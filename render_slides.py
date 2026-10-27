@@ -37,9 +37,18 @@ def md_block_to_html(block):
     """Convert one slide's markdown body to HTML (headings, lists, code, tables, quotes)."""
     lines = block.split("\n")
     out, i = [], 0
-    in_code = in_list = in_table = False
+    in_code = in_list = in_table = in_raw = False
     while i < len(lines):
         line = lines[i]
+        # raw passthrough block: ```svg ... ``` emits contents verbatim (for inline SVG diagrams)
+        if line.strip() == "```svg":
+            in_raw = True; i += 1; continue
+        if in_raw:
+            if line.strip() == "```":
+                in_raw = False
+            else:
+                out.append(line)  # NOT escaped — raw SVG/HTML
+            i += 1; continue
         # fenced code
         if line.strip().startswith("```"):
             if not in_code:
@@ -123,6 +132,8 @@ def render(module):
  table{{border-collapse:collapse;font-size:1.05em}} th,td{{border:1px solid #cbd2e0;padding:6px 12px;text-align:left}} th{{background:#eef1f6}}
  .nav{{position:fixed;bottom:12px;right:16px;color:#1f2a44;background:#fff;
    padding:4px 10px;border-radius:6px;font-size:.9em;opacity:.8}}
+ svg{{display:block;margin:1em auto;max-width:92%;height:auto}}
+ .diagram-caption{{text-align:center;color:#555;font-size:.95em;margin-top:.2em}}
 </style></head><body>
 {body}
 <div class="nav"><span id="n">1</span> / {len(slides_html)} &nbsp;(← →)</div>
