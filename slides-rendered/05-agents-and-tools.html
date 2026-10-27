@@ -15,61 +15,62 @@
  .nav{position:fixed;bottom:12px;right:16px;color:#1f2a44;background:#fff;
    padding:4px 10px;border-radius:6px;font-size:.9em;opacity:.8}
 </style></head><body>
-<section class="slide"><h1>Module 5</h1>
-<h2>Agents &amp; Tool-Calling</h2>
-<p>Where LLMs stop talking and start doing.</p></section>
-<section class="slide"><h2>What an agent really is</h2>
-<blockquote><strong>an LLM + tools + a loop</strong></blockquote>
+<section class="slide"><h1>Module 5 — Agents, Tool-Calling &amp; Orchestration</h1>
+<h3>Control loops around a stochastic, occasionally-wrong controller</h3></section>
+<section class="slide"><h2>Definition that survives production</h2>
+<blockquote>An agent is a <strong>control loop</strong>: the LLM chooses actions → runtime executes →</blockquote>
+<blockquote>results feed back into context → until a termination condition.</blockquote>
+<p>You&#x27;re building a control system whose **controller is non-deterministic and</p>
+<p>sometimes wrong.<strong> The LLM plans; </strong>your code is the runtime, sandbox, and</p>
+<p>safety envelope.**</p></section>
+<section class="slide"><h2>Tool-calling, mechanically</h2>
 <ul>
-<li><strong>LLM</strong> decides what to do next</li>
-<li><strong>Tools</strong> = functions it can call (search, query, run code, send email)</li>
-<li><strong>Loop</strong> = think → act → observe → repeat, until done</li>
+<li>Advertise tools as <strong>schemas</strong> (name/desc/typed params) — <em>descriptions are prompt</em></li>
+<li>Model returns a structured <strong>tool call</strong> (not prose)</li>
+<li><strong>Your runtime</strong> validates args, enforces authz, executes, captures result</li>
+<li>Append result → model continues (another call or final answer)</li>
 </ul>
-<p>&quot;Agentic&quot; = the model can <strong>take actions</strong> and react to results.</p></section>
-<section class="slide"><h2>Tool-calling (the core mechanism)</h2>
-<p>An LLM only produces text — it can&#x27;t run code itself. So:</p>
-<pre><code>
-1. You describe tools to the model (name, purpose, params)
-2. Model replies: &quot;call get_weather({city:&#x27;Denver&#x27;})&quot;
-3. YOUR code runs the function
-4. You feed the result back
-5. Model answers (or calls another tool)
-</code></pre>
-<p>🔒 The model only <em>requests</em>. <strong>Your code decides whether to run it.</strong></p></section>
-<section class="slide"><h2>The agent loop</h2>
-<pre><code>
-1. give LLM the goal + available tools
-2. LLM → final answer OR a tool call
-3. tool call? your code runs it, captures result
-4. feed result back
-5. repeat until final answer (or a limit)
-</code></pre>
-<p>⚠️ <strong>Always cap the loop</strong> — unbounded agents loop, cost, and thrash.</p></section>
-<section class="slide"><h2>Where MCP fits</h2>
-<p>Many tools across many systems → integration chaos.</p>
-<p><strong>MCP (Model Context Protocol)</strong> = open standard for exposing/calling tools.</p>
+<blockquote>The boundary is step 3: <strong>model proposes, your code disposes.</strong></blockquote>
+<blockquote>A prompt instruction is <strong>not</strong> a security control.</blockquote></section>
+<section class="slide"><h2>Architectures — choose deliberately</h2>
 <ul>
-<li><strong>MCP server</strong> — exposes tools (Jira, GitHub, …)</li>
-<li><strong>MCP client</strong> — your AI app uses them</li>
-<li><strong>MCP gateway</strong> — routes many servers; adds auth, rate limits, logging</li>
+<li><strong>ReAct</strong> — thought→action→observation, repeat. Default; can meander</li>
+<li><strong>Plan-then-execute</strong> — plan up front, then run. Controllable/auditable; less adaptive</li>
+<li><strong>Reflection/critique</strong> — second pass revises (your Builder→Validator loop)</li>
+<li><strong>Multi-agent</strong> — scoped roles + coordinator. Powerful; costly, compounding error</li>
 </ul>
-<blockquote>The &quot;USB-C of AI tools.&quot; Build a tool once; any MCP client can use it.</blockquote></section>
-<section class="slide"><h2>What can go wrong (design for it)</h2>
+<blockquote>Bias to the <strong>least agentic design</strong> that works. Fixed pipeline + one LLM call</blockquote>
+<blockquote>beats an autonomous loop when the task allows.</blockquote></section>
+<section class="slide"><h2>The problems that dominate</h2>
 <ul>
-<li><strong>Runaway loops</strong> → cap iterations &amp; cost</li>
-<li><strong>Irreversible actions</strong> → confirm spend/delete/send; human in the loop</li>
-<li><strong>Prompt injection via tool results</strong> → treat tool output as untrusted</li>
-<li><strong>Over-broad permissions</strong> → least access per tool</li>
-</ul>
-<p>Good agent engineering = good <strong>boundary</strong> engineering.</p></section>
-<section class="slide"><h2>Lab</h2>
+<li><strong>Reliability compounds:</strong> 90%/step × 5 steps ≈ <strong>59%</strong></li>
+<li><strong>Context growth:</strong> each step appends → cost, latency, lost-in-middle → prune/summarize</li>
+<li><strong>Loops/non-termination:</strong> bound iterations &amp; cost; detect no-progress</li>
+<li><strong>Error recovery:</strong> feed failures back as observations; retry/backoff; escalate</li>
+<li><strong>Observability:</strong> log every thought/call/arg/result/cost — traces non-optional</li>
+</ul></section>
+<section class="slide"><h2>MCP — standardizing integration</h2>
+<p>N apps × M tools × bespoke glue → doesn&#x27;t scale.</p>
 <ul>
-<li>Build a tiny <strong>agent</strong>: LLM + 2 tools + a loop</li>
-<li>Watch it <strong>think → call a tool → observe → answer</strong></li>
-<li>See where <strong>your code</strong> gates the tool call</li>
+<li><strong>Server</strong> — exposes a capability set (Jira, GitHub, DB) uniformly</li>
+<li><strong>Client</strong> — any compliant AI app consumes it</li>
+<li><strong>Gateway</strong> — fronts many servers: routing, authz, rate limits, circuit</li>
+<p>  breaking, audit — one governed entry point</p>
 </ul>
-<p><strong>Next:</strong> Module 6 — Building Real, Responsible AI Apps</p></section>
-<div class="nav"><span id="n">1</span> / 7 &nbsp;(← →)</div>
+<blockquote>The gateway is the natural place to enforce the safety envelope fleet-wide.</blockquote>
+<blockquote>(<code>ai-mcp-servers</code>: 200+ tools, circuit breakers, rate limits, audit.)</blockquote></section>
+<section class="slide"><h2>Security &amp; safety surface</h2>
+<p>Agents turn model mistakes into <strong>actions with side effects</strong>:</p>
+<ul>
+<li><strong>Prompt injection → tool abuse</strong> — tool output is untrusted; constrain reachable tools</li>
+<li><strong>Excessive agency</strong> — least privilege; gate destructive/spending actions</li>
+<li><strong>Blast radius</strong> — assume it <em>will</em> err: read-only default, dry-run, spend caps, reversibility</li>
+</ul></section>
+<section class="slide"><h2>Next</h2>
+<p><strong>Lab:</strong> build a bounded agent; find the propose/dispose boundary in code; break</p>
+<p>reliability by raising step count; add a human-approval gate for a destructive tool.</p>
+<p><strong>Module 6:</strong> evals, guardrails, cost, security, bias — shipping responsibly.</p></section>
+<div class="nav"><span id="n">1</span> / 8 &nbsp;(← →)</div>
 <script>
  let i=0; const s=document.querySelectorAll('.slide');
  function show(x){s[i].classList.remove('active');i=(x+s.length)%s.length;s[i].classList.add('active');document.getElementById('n').textContent=i+1;}

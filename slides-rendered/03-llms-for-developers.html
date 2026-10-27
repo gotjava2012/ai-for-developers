@@ -15,62 +15,77 @@
  .nav{position:fixed;bottom:12px;right:16px;color:#1f2a44;background:#fff;
    padding:4px 10px;border-radius:6px;font-size:.9em;opacity:.8}
 </style></head><body>
-<section class="slide"><h1>Module 3</h1>
-<h2>LLMs for Developers</h2>
-<p>What an LLM really does — and your first call from code.</p></section>
-<section class="slide"><h2>What an LLM actually does</h2>
-<blockquote>Given some text, <strong>predict the next token.</strong></blockquote>
+<section class="slide"><h1>Module 3 — LLMs for Developers</h1>
+<h3>Enough mechanism to debug, cost, and optimize one</h3></section>
+<section class="slide"><h2>The core object</h2>
+<p><code>P(next_token | tokens_so_far)</code> → sample → append → repeat</p>
+<pre><code>
+context → model → logits over vocab → sampling → next token → (repeat)
+</code></pre>
 <ul>
-<li>A <strong>token</strong> ≈ ¾ of a word</li>
-<li>Output a probability for every possible next token → pick one → repeat</li>
-<li>Whole paragraphs = next-token prediction, over and over</li>
-</ul>
-<p>It is <strong>not</strong> looking things up. It&#x27;s generating likely continuations.</p></section>
-<section class="slide"><h2>The knobs you&#x27;ll touch</h2>
+<li>Generation is <strong>sequential, O(tokens)</strong> → output latency ∝ tokens produced</li>
+<li><strong>No cross-request state</strong> unless you supply it — chat &quot;memory&quot; is prior turns</li>
+<p>  re-sent (and re-paid) every turn</p>
+</ul></section>
+<section class="slide"><h2>Tokenization — the unit of everything</h2>
+<p>Models see <strong>tokens</strong> (BPE subwords), not chars/words. Vocab ~50k–200k.</p>
 <ul>
-<li><strong>Context window</strong> — max tokens it can see (prompt + output)</li>
-<li><strong>Temperature</strong> — randomness (0 = focused, high = creative)</li>
-<li><strong>Max tokens</strong> — output length cap</li>
-<li><strong>System prompt</strong> — sets role &amp; rules (your main lever)</li>
-<li><strong>Stop sequences</strong> — halt generation</li>
-</ul>
-<p>💸 You pay per token — <strong>input and output</strong>. Token-awareness = a core skill.</p></section>
-<section class="slide"><h2>Prompting is engineering</h2>
+<li>Content-dependent: English ≈1.3 tok/word; <strong>code/JSON/non-English cost more</strong></li>
+<li>Context limits, pricing, latency are <strong>all</strong> token-denominated</li>
+<li>Explains classic failures: char-counting, digit arithmetic, string reversal —</li>
+<p>  the model never sees characters</p>
+</ul></section>
+<section class="slide"><h2>Context window = hard, quadratic-cost resource</h2>
+<p>Attention ≈ <strong>O(n²)</strong> in length. The window must hold:</p>
+<p>system + instructions + few-shot + retrieved evidence + history + output room.</p>
 <ul>
-<li><strong>System prompt</strong> sets role + rules</li>
-<li>Be <strong>specific about format</strong> (JSON? list? show an example)</li>
-<li>Give <strong>examples</strong> (few-shot) — often beats instructions</li>
-<li>Put instruction first; <strong>delimit</strong> the data clearly</li>
-<li>&quot;Think step by step&quot; for reasoning tasks</li>
-</ul>
-<p>Vague prompt → vague output. Specificity is the game.</p></section>
-<section class="slide"><h2>Hallucination</h2>
-<p>LLMs generate <em>plausible</em> text, not <em>retrieved true</em> text.</p>
-<p>→ They state false things <strong>confidently</strong>.</p>
-<p>Not fully fixable — <strong>manage</strong> it:</p>
+<li>Bigger ≠ free: ↑latency, ↑cost, and often ↓quality</li>
+<li><strong>Lost-in-the-middle</strong>: better attention at the ends than the middle</li>
+<li>Context management (truncate / summarize / retrieve / order) is real engineering</li>
+</ul></section>
+<section class="slide"><h2>Sampling controls — what the knobs do</h2>
 <ul>
-<li>Ground with real data (<strong>RAG</strong>, Module 4)</li>
-<li>Ask for sources &amp; verify</li>
-<li>Lower temperature for facts</li>
-<li>Never auto-trust output</li>
+<li><strong>Temperature</strong> — scales logits; T→0 ≈ greedy, high T flattens (diverse, error-prone)</li>
+<li><strong>top-p (nucleus)</strong> — smallest set with cumulative prob ≥ p</li>
+<li><strong>top-k</strong> — restrict to k most probable</li>
+<li><strong>frequency/presence penalties</strong> — curb repetition</li>
+<li><strong>stop / max_tokens</strong> — hard termination &amp; cost bound</li>
 </ul>
-<blockquote>#1 beginner mistake: assuming the output is true.</blockquote></section>
-<section class="slide"><h2>Local vs. hosted</h2>
+<blockquote>Determinism needs T=0 <strong>and</strong> pinned version — and still isn&#x27;t guaranteed.</blockquote></section>
+<section class="slide"><h2>Prompting = context engineering</h2>
 <ul>
-<li><strong>Hosted API</strong> (OpenAI/Anthropic) — easiest, most capable, pay-per-token</li>
-<li><strong>Local</strong> (Ollama) — free, private, offline, smaller models</li>
-<li><strong>Open-weight</strong> (Llama/Qwen) — download, run, or fine-tune</li>
+<li><strong>System prompt</strong> — persistent rules / output contract / refusal behavior</li>
+<li><strong>Structured output</strong> — schema + exemplar + provider JSON/tool mode</li>
+<li><strong>Few-shot</strong> — 2–5 examples steer the distribution &gt; prose instructions</li>
+<li><strong>Delimit instructions vs. data</strong> — first defense vs. prompt injection</li>
+<li><strong>CoT / decomposition</strong> — improves multi-step; can hide or offload to cheaper model</li>
 </ul>
-<p>Labs default to <strong>Ollama</strong> (free/offline) — same code pattern as an API.</p></section>
-<section class="slide"><h2>Lab</h2>
+<p>Expect &amp; test: instruction drift, phrasing/order sensitivity, silent format breaks.</p></section>
+<section class="slide"><h2>Hallucination, precisely</h2>
+<p>Model samples <code>P(plausible)</code> ≠ <code>P(true)</code> → fabrication is <strong>intrinsic</strong>, not a bug.</p>
+<p>Manage rate + blast radius (by leverage):</p>
 <ul>
-<li>Make your <strong>first LLM call</strong> from code (Ollama or an API)</li>
-<li>Change <strong>temperature</strong> — watch output vary</li>
-<li>Improve a <strong>prompt</strong> and compare results</li>
-<li><strong>Trigger a hallucination</strong> on purpose</li>
+<li><strong>Ground it</strong> (RAG) — highest leverage</li>
+<li><strong>Constrain output</strong> — schemas, enums, validated tool args</li>
+<li><strong>Lower temperature</strong> for facts</li>
+<li><strong>Verify</strong> — citations, cross-check</li>
+<li><strong>Evaluate</strong> — measure fabrication rate, track across changes</li>
 </ul>
-<p><strong>Next:</strong> Module 4 — Giving an LLM Your Own Data (RAG &amp; fine-tuning)</p></section>
-<div class="nav"><span id="n">1</span> / 7 &nbsp;(← →)</div>
+<blockquote>Put the cost of a wrong answer behind a gate proportional to that cost.</blockquote></section>
+<section class="slide"><h2>Deployment surface — tradeoffs</h2>
+<ul>
+<li><strong>Hosted frontier</strong> — top capability, per-token $, data egress, vendor lock</li>
+<li><strong>Open-weight self-host</strong> — control/privacy/fixed cost/fine-tunable; you own ops</li>
+<li><strong>Local</strong> (Ollama/llama.cpp) — free, private, offline, smaller/weaker</li>
+<li><strong>Quantization</strong> (8/4-bit) — small quality hit for big memory/latency win</li>
+</ul>
+<p>Increasingly a <strong>routing</strong> decision: cheap for easy, frontier for hard.</p></section>
+<section class="slide"><h2>Next</h2>
+<p><strong>Lab:</strong> drive a model from code; watch prefill vs decode latency; move</p>
+<p>temperature/top-p; force structured output; reproduce a fabrication.</p>
+<p><strong>Module 4:</strong> grounding &amp; customization — RAG vs fine-tuning, with failure modes</p>
+<p>and eval metrics.</p></section>
+<div class="nav"><span id="n">1</span> / 9 &nbsp;(← →)</div>
 <script>
  let i=0; const s=document.querySelectorAll('.slide');
  function show(x){s[i].classList.remove('active');i=(x+s.length)%s.length;s[i].classList.add('active');document.getElementById('n').textContent=i+1;}

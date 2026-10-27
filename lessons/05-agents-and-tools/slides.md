@@ -2,87 +2,86 @@
 marp: true
 theme: default
 paginate: true
-header: "AI for Developers · Module 5 — Agents & Tool-Calling"
+header: "AI for Developers · Module 5 — Agents & Orchestration"
 ---
 
-# Module 5
-## Agents & Tool-Calling
-
-Where LLMs stop talking and start doing.
-
----
-
-## What an agent really is
-
-> **an LLM + tools + a loop**
-
-- **LLM** decides what to do next
-- **Tools** = functions it can call (search, query, run code, send email)
-- **Loop** = think → act → observe → repeat, until done
-
-"Agentic" = the model can **take actions** and react to results.
+# Module 5 — Agents, Tool-Calling & Orchestration
+### Control loops around a stochastic, occasionally-wrong controller
 
 ---
 
-## Tool-calling (the core mechanism)
+## Definition that survives production
 
-An LLM only produces text — it can't run code itself. So:
+> An agent is a **control loop**: the LLM chooses actions → runtime executes →
+> results feed back into context → until a termination condition.
 
-```
-1. You describe tools to the model (name, purpose, params)
-2. Model replies: "call get_weather({city:'Denver'})"
-3. YOUR code runs the function
-4. You feed the result back
-5. Model answers (or calls another tool)
-```
-
-🔒 The model only *requests*. **Your code decides whether to run it.**
+You're building a control system whose **controller is non-deterministic and
+sometimes wrong.** The LLM plans; **your code is the runtime, sandbox, and
+safety envelope.**
 
 ---
 
-## The agent loop
+## Tool-calling, mechanically
 
-```
-1. give LLM the goal + available tools
-2. LLM → final answer OR a tool call
-3. tool call? your code runs it, captures result
-4. feed result back
-5. repeat until final answer (or a limit)
-```
+1. Advertise tools as **schemas** (name/desc/typed params) — *descriptions are prompt*
+2. Model returns a structured **tool call** (not prose)
+3. **Your runtime** validates args, enforces authz, executes, captures result
+4. Append result → model continues (another call or final answer)
 
-⚠️ **Always cap the loop** — unbounded agents loop, cost, and thrash.
+> The boundary is step 3: **model proposes, your code disposes.**
+> A prompt instruction is **not** a security control.
 
 ---
 
-## Where MCP fits
+## Architectures — choose deliberately
 
-Many tools across many systems → integration chaos.
+- **ReAct** — thought→action→observation, repeat. Default; can meander
+- **Plan-then-execute** — plan up front, then run. Controllable/auditable; less adaptive
+- **Reflection/critique** — second pass revises (your Builder→Validator loop)
+- **Multi-agent** — scoped roles + coordinator. Powerful; costly, compounding error
 
-**MCP (Model Context Protocol)** = open standard for exposing/calling tools.
-
-- **MCP server** — exposes tools (Jira, GitHub, …)
-- **MCP client** — your AI app uses them
-- **MCP gateway** — routes many servers; adds auth, rate limits, logging
-
-> The "USB-C of AI tools." Build a tool once; any MCP client can use it.
+> Bias to the **least agentic design** that works. Fixed pipeline + one LLM call
+> beats an autonomous loop when the task allows.
 
 ---
 
-## What can go wrong (design for it)
+## The problems that dominate
 
-- **Runaway loops** → cap iterations & cost
-- **Irreversible actions** → confirm spend/delete/send; human in the loop
-- **Prompt injection via tool results** → treat tool output as untrusted
-- **Over-broad permissions** → least access per tool
-
-Good agent engineering = good **boundary** engineering.
+- **Reliability compounds:** 90%/step × 5 steps ≈ **59%**
+- **Context growth:** each step appends → cost, latency, lost-in-middle → prune/summarize
+- **Loops/non-termination:** bound iterations & cost; detect no-progress
+- **Error recovery:** feed failures back as observations; retry/backoff; escalate
+- **Observability:** log every thought/call/arg/result/cost — traces non-optional
 
 ---
 
-## Lab
+## MCP — standardizing integration
 
-1. Build a tiny **agent**: LLM + 2 tools + a loop
-2. Watch it **think → call a tool → observe → answer**
-3. See where **your code** gates the tool call
+N apps × M tools × bespoke glue → doesn't scale.
 
-**Next:** Module 6 — Building Real, Responsible AI Apps
+- **Server** — exposes a capability set (Jira, GitHub, DB) uniformly
+- **Client** — any compliant AI app consumes it
+- **Gateway** — fronts many servers: routing, authz, rate limits, circuit
+  breaking, audit — one governed entry point
+
+> The gateway is the natural place to enforce the safety envelope fleet-wide.
+> (`ai-mcp-servers`: 200+ tools, circuit breakers, rate limits, audit.)
+
+---
+
+## Security & safety surface
+
+Agents turn model mistakes into **actions with side effects**:
+
+- **Prompt injection → tool abuse** — tool output is untrusted; constrain reachable tools
+- **Excessive agency** — least privilege; gate destructive/spending actions
+- **Blast radius** — assume it *will* err: read-only default, dry-run, spend caps, reversibility
+
+---
+
+## Next
+
+**Lab:** build a bounded agent; find the propose/dispose boundary in code; break
+reliability by raising step count; add a human-approval gate for a destructive tool.
+
+**Module 6:** evals, guardrails, cost, security, bias — shipping responsibly.

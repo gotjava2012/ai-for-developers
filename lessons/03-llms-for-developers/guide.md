@@ -1,119 +1,161 @@
 # Module 3 — LLMs for Developers
 
-> **Goal:** Understand what an LLM actually does, the knobs you'll touch
-> (tokens, context, temperature), how to prompt well, and why LLMs hallucinate —
-> then make your first LLM call from code.
+> **Goal:** Understand an LLM at the level you'd need to debug, cost, and
+> optimize one in production — tokenization, the autoregressive loop, the
+> sampling controls, context as a managed resource, and prompting as *context
+> engineering* with characterizable failure modes. Then drive one from code.
 
 ---
 
-## 3.1 What an LLM actually does
+## 3.1 The core object: an autoregressive conditional distribution
 
-A Large Language Model does exactly one thing at its core:
+An LLM computes `P(next_token | tokens_so_far)` over a fixed vocabulary, then
+generates by sampling one token, appending it, and repeating:
 
-> **Given some text, predict the next token.**
+```
+context → model → logits over vocab → sampling → next token → (append, repeat)
+```
 
-A **token** is a chunk of text — roughly ¾ of a word on average (e.g. "developer"
-might be one token; "tokenization" might be two or three). The model outputs a
-probability for every possible next token, picks one, appends it, and repeats.
-That's how it writes whole paragraphs: next-token prediction, over and over.
-
-Everything impressive an LLM does — answering, coding, summarizing — emerges from
-that one mechanism at massive scale. It is **not** looking things up in a
-database. It is generating statistically likely continuations.
-
-That single fact explains most LLM behavior, including the weird parts.
-
----
-
-## 3.2 The knobs you'll actually touch
-
-| Knob | What it does | Practical advice |
-|------|--------------|------------------|
-| **Context window** | Max tokens the model can "see" at once (prompt + output) | Everything — your instructions, the user input, retrieved docs, the reply — must fit. Larger = more room, more cost. |
-| **Temperature** | Randomness of the output (0 = deterministic-ish, higher = more varied/creative) | Low (0–0.3) for factual/structured tasks; higher (0.7–1.0) for brainstorming/creative. |
-| **Max tokens** | Cap on output length | Controls cost and prevents runaway responses. |
-| **System prompt** | A top-level instruction that sets role/behavior | Your main lever for steering the model. |
-| **Stop sequences** | Strings that halt generation | Useful for structured output. |
-
-**Cost note:** you pay per token — *both* input and output. A long prompt with
-big retrieved documents costs real money on every call. Token-awareness is a
-core engineering skill (Module 6).
+Two implications engineers under-appreciate:
+- **Generation is sequential and O(tokens):** output latency scales with the
+  number of tokens produced; input can be processed in parallel (prefill) but
+  output is decoded one token at a time.
+- **There is no state between requests** unless you supply it. "Memory" in a
+  chat is just prior turns re-sent in the context. Conversation history is a
+  thing *you* manage and pay for every turn.
 
 ---
 
-## 3.3 Prompting is engineering, not magic
+## 3.2 Tokenization — the unit of everything
 
-A prompt is your API to the model. Treat it with the same rigor as any input.
-Patterns that reliably work:
+Models operate on **tokens**, not characters or words. A tokenizer (typically
+**byte-pair encoding**) maps text to integer IDs from a fixed vocabulary
+(~50k–200k). Practical consequences:
 
-1. **Use a system prompt to set role and rules.**
-   *"You are a precise assistant. Answer only from the provided context. If
-   unknown, say 'I don't know.'"*
-2. **Be specific about format.** Ask for JSON, a list, a table — and show an
-   example of the shape you want.
-3. **Give examples (few-shot).** Showing 2–3 input→output examples often beats
-   a paragraph of instructions.
-4. **Put the instruction first and the data clearly delimited.** e.g. wrap user
-   content in triple backticks or XML-ish tags so the model doesn't confuse
-   instructions with data.
-5. **Ask it to think step by step** for reasoning tasks (it improves multi-step
-   answers).
-
-**Anti-pattern:** vague prompts ("make this better") → vague, inconsistent
-output. Specificity is the whole game.
+- Tokenization is **language- and content-dependent**: English prose is ~1.3
+  tokens/word; code, JSON, non-English, and rare strings tokenize far less
+  efficiently (more tokens → more cost and context used).
+- **Everything is denominated in tokens** — context limits, pricing, latency.
+  Estimating token counts for your actual payloads is a real budgeting step, not
+  a rounding error.
+- Tokenization artifacts explain classic failures (character-counting,
+  arithmetic on digits, reversing strings) — the model never sees characters.
 
 ---
 
-## 3.4 Hallucination — the thing you must design around
+## 3.3 Context window — a hard, quadratic-cost resource
 
-Because an LLM generates *plausible* text rather than *retrieving true* text, it
-will sometimes produce confident, fluent, completely false statements. Fake
-citations, invented APIs, wrong dates — stated with total confidence.
+Attention cost scales ~**quadratically** with sequence length, so the context
+window is a bounded resource with real price/latency implications. You are
+always managing a budget that must hold: system prompt + instructions + few-shot
+examples + retrieved evidence + conversation history + the room for the output.
 
-This is not a bug you can fully "fix" — it's inherent to how LLMs work. You
-**manage** it:
-
-- **Ground it with real data** (RAG — Module 4): give the model the facts and
-  tell it to answer only from them.
-- **Ask for sources** and verify them.
-- **Lower temperature** for factual tasks.
-- **Never auto-trust** output for anything consequential without a check.
-- **Add evals and guardrails** (Module 6).
-
-> The #1 beginner mistake: shipping an LLM feature that assumes the output is
-> true. Design as if it sometimes lies — because it does.
+- **Larger windows ≠ free.** Long context raises latency and cost and can *lower*
+  quality — models exhibit **"lost in the middle"**, attending better to the
+  start and end than the middle. More context is not strictly better.
+- **Context management is an engineering task:** truncation, summarization of old
+  turns, retrieval of only relevant chunks (Module 4), and ordering matters.
 
 ---
 
-## 3.5 Open vs. hosted, local vs. API
+## 3.4 The sampling controls — what the knobs actually do
 
-- **Hosted APIs** (OpenAI, Anthropic, Google) — easiest, most capable, pay per
-  token, data leaves your machine. Best for most apps.
-- **Local models** (via **Ollama**, etc.) — free, private, offline, run on your
-  hardware; smaller/less capable but great for learning, prototyping, and
-  privacy-sensitive work.
-- **Open-weight models** (Llama, Qwen, Mistral) — you can download and run or
-  fine-tune them (Module 4).
+Decoding converts logits into a token. The knobs:
 
-For this course's labs we default to **Ollama** so everything is free and
-offline, but the code pattern is identical for a hosted API.
+- **Temperature** — scales the logits before softmax. T→0 approaches greedy
+  (argmax), high T flattens the distribution toward uniform (more diverse, more
+  error). Low for extraction/structured output; higher for ideation.
+- **top-p (nucleus)** — sample only from the smallest set of tokens whose
+  cumulative probability ≥ p. Adaptively truncates the tail.
+- **top-k** — restrict to the k most probable tokens.
+- **frequency/presence penalties** — discourage repetition.
+- **stop sequences / max_tokens** — hard termination controls; `max_tokens`
+  bounds cost and runaway output.
+
+Determinism requires T=0 **and** a pinned model version — and even then can vary
+across providers/hardware due to floating-point and batching nondeterminism.
+Don't design on an assumption of bit-reproducible output.
 
 ---
 
-## Key terms
-- **Token** — a chunk of text (~¾ word); models read/write in tokens.
-- **Context window** — max tokens the model can consider at once.
-- **Temperature** — output randomness knob.
-- **System prompt** — top-level instruction setting behavior.
-- **Few-shot** — giving examples in the prompt.
-- **Hallucination** — confident, fluent, false output.
+## 3.5 Prompting is context engineering
+
+A prompt is the model's entire input state; treat it with the rigor of an API
+contract. Techniques, with *why* they work:
+
+- **System prompt** sets a persistent instruction/role separate from user input.
+  Use it to establish rules, output contract, and refusal behavior.
+- **Structured output** — specify a schema and show an exemplar; pair with
+  provider features (JSON mode, function/tool schemas) rather than hoping.
+- **Few-shot** — in-context examples steer the output distribution far more
+  reliably than prose instructions; 2–5 well-chosen examples often dominate.
+- **Delimit instructions from data** — untrusted content goes in clearly marked
+  regions so the model (and you) can distinguish commands from payload. This is
+  also your first line against **prompt injection** (Module 6).
+- **Chain-of-thought / decomposition** — eliciting intermediate steps improves
+  multi-step tasks; for latency/cost you can keep the reasoning hidden or move it
+  to a cheaper model.
+
+Failure modes to expect and test for: instruction drift over long contexts,
+sensitivity to phrasing/ordering, silent format violations, and
+over-confident fabrication.
+
+---
+
+## 3.6 Hallucination, precisely — and the mitigation hierarchy
+
+A model samples from `P(plausible continuation)`, which is **not** `P(true
+statement)`. Fabrication is therefore an intrinsic property, not a defect to be
+patched. You manage its *rate and blast radius*:
+
+1. **Ground it** — supply the facts in-context and instruct answer-only-from-
+   context (RAG, Module 4). The highest-leverage mitigation.
+2. **Constrain the output** — schemas, enums, tool calls with validated args,
+   refusal paths.
+3. **Lower temperature** for factual tasks.
+4. **Verify** — require citations and check them; cross-check against sources.
+5. **Evaluate** — measure the fabrication rate on a golden set; track it across
+   prompt/model changes (Module 6).
+
+> The architectural error is treating output as authoritative. Design for a
+> known, nonzero fabrication rate and put the cost of a wrong answer behind a
+> validation or human-in-the-loop gate proportional to that cost.
+
+---
+
+## 3.7 Deployment surface — the real tradeoffs
+
+- **Hosted frontier APIs** (OpenAI, Anthropic, Google) — highest capability,
+  per-token pricing, data egress and vendor dependence; fastest to build.
+- **Open-weight models** (Llama, Qwen, Mistral) self-hosted or via inference
+  providers — control, privacy, fixed infra cost, fine-tunable; you own ops,
+  scaling, and quality gaps.
+- **Local runtimes** (Ollama, llama.cpp) — free, private, offline; smaller models
+  and lower quality, ideal for dev/prototyping and privacy-bound workloads.
+- **Quantization** (8-/4-bit) trades a little quality for large memory/latency
+  wins — what makes capable models run on modest hardware.
+
+Selection is a cost/capability/privacy/ops tradeoff, and increasingly a
+**routing** decision (cheap model for easy calls, frontier for hard ones —
+Module 6).
+
+---
+
+## Terms, at working precision
+- **Autoregressive decoding** — generate one token at a time, each conditioned on all prior.
+- **BPE tokenization** — subword vocabulary; the unit of context, cost, latency.
+- **Prefill vs. decode** — parallel input processing vs. sequential output generation.
+- **Temperature / top-p / top-k** — the sampling-distribution controls.
+- **Context budget** — finite, quadratic-cost window you allocate across prompt/evidence/history/output.
+- **Lost-in-the-middle** — degraded attention to mid-context content.
 
 ## Check yourself
-1. In one sentence, what does an LLM fundamentally do?
-2. You need consistent, structured JSON output. What temperature range, and
-   what prompting technique?
-3. Why do LLMs hallucinate, and what's the main way to reduce it?
-4. When would you choose a local model over a hosted API?
+1. Why does output latency scale with tokens generated while input mostly doesn't?
+2. Give two reasons a longer context window can *hurt* rather than help.
+3. Distinguish temperature, top-p, and top-k in terms of how each shapes the sampling set.
+4. Why is "character counting / string reversal" a predictable weak spot, given tokenization?
+5. State hallucination as a statement about two different distributions, and rank the mitigations by leverage.
 
-➡️ **Do the `lab/`** — make your first LLM call, experiment with temperature and
-prompts, and trigger a hallucination on purpose so you never forget it's possible.
+➡️ **Lab:** drive a model from code; observe prefill/decode latency; manipulate
+temperature/top-p; force structured output; and reproduce a fabrication to
+internalize the failure mode.

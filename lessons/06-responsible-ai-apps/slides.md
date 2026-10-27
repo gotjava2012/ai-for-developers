@@ -2,94 +2,103 @@
 marp: true
 theme: default
 paginate: true
-header: "AI for Developers · Module 6 — Responsible AI Apps"
+header: "AI for Developers · Module 6 — Production & Responsible AI"
 ---
 
-# Module 6
-## Building Real, Responsible AI Apps
-
-From cool demo → trustworthy, shippable feature.
-
----
-
-## Evals — does it even work?
-
-LLMs are non-deterministic → exact-match tests don't fit.
-Measure **quality** instead:
-
-- **Golden set** — fixed inputs + known-good expectations
-- **Rule/assertion checks** — valid JSON? required fields? cites a source?
-- **Similarity / keyword** — are the key facts present?
-- **LLM-as-judge** — another model scores (validate it)
-- **Human review** — gold standard for high-stakes
-
-> Even 20 examples beats vibes. Build evals early.
+# Module 6 — Production & Responsible AI Engineering
+### The discipline that separates a demo from a trustworthy system
 
 ---
 
-## Guardrails — constrain in & out
+## Evaluation — hardest, most skipped
 
-- **Input** — block prompt injection, PII, off-topic/abuse
-- **Output** — schema/JSON validation, forbidden-content filter, "must cite,"
-  length, groundedness
-- **Fallbacks** — safe default when a guardrail trips
+Non-deterministic, open-ended output → no exact-match tests. Build an **eval
+system** that **gates changes**:
 
-> Never pipe raw LLM output into something consequential
-> (DB write, email, shell) without validating it.
-
----
-
-## Cost & latency
-
-- **Route by difficulty** — cheap model for easy, big model for hard
-- **Trim prompts/context** — shorter = cheaper
-- **Cache** repeated queries/embeddings
-- **Stream** tokens → better perceived latency
-- **Set `max_tokens`** — cap runaway cost
-
-> Track cost per request from day one.
+- **Golden sets** — curated fixtures = regression suite
+- **Programmatic checks** — schema, required fields, must-cite, forbidden content
+- **Reference metrics** — exact match / F1 / embedding similarity
+- **LLM-as-judge** — scales, but biased + nondeterministic → **validate vs humans**, pin the judge
+- **Human eval** — ground truth for high-stakes
 
 ---
 
-## Security — AI-specific risks
+## Offline vs online
 
-- **Prompt injection** — hostile instructions in untrusted content
-  → treat all external content as untrusted; separate instructions from data
-- **Data leakage** — no secrets in prompts; redact PII; careful logging
-- **Insecure output handling** — output in SQL/shell/HTML → validate & escape
-- **Excessive agency** — least privilege + human approval
+- **Offline** evals gate deploys (quality CI)
+- **Online** — A/B, user signals, trace sampling — catches drift offline misses
 
-(≈ OWASP Top 10 for LLM apps)
+> The question for any number: *which dataset, which metric, does it gate
+> releases?* Unmeasured quality = unmonitored production change.
 
 ---
 
-## Bias, fairness & privacy
+## Guardrails — layered control architecture
 
-- **Bias** — models mirror training data; test disparate outcomes; human in the
-  loop for consequential decisions
-- **Privacy** — know where data goes; minimize; comply (GDPR…)
-- **Transparency** — tell users it's AI and that it can be wrong
+- **Input** — injection detect, PII redaction, topic/abuse, size limits
+- **Output** — schema/type, grounding/faithfulness, toxicity/PII, policy
+- **Action** — authz, allow-lists, confirmation/human-in-loop, spend caps
+- **Fallbacks** — retry / degrade / refuse / escalate (no fallback = outage)
+
+> Never route raw output into a consequential sink (DB/shell/email/pay) without
+> validation proportional to the cost of being wrong.
+
+---
+
+## Cost & latency engineering
+
+- **Model routing / cascade** — cheap model for easy, frontier for hard (biggest lever)
+- **Context economy** — trim chunks, summarize history, compress prompts
+- **Caching** — response (exact+semantic), embeddings, prompt/KV
+- **Streaming** — collapse *perceived* latency
+- **`max_tokens`**, batching, async
+
+Instrument **cost + latency per request from day one.**
+
+---
+
+## LLM security surface (OWASP LLM Top 10)
+
+- **Prompt injection (direct & indirect)** — untrusted input *and* ingested
+  content (RAG/tools/pages); no prompt fully prevents it
+- **Insecure output handling** — output → SQL/shell/HTML/code = injection
+- **Sensitive-info disclosure** — secrets in prompts, PII in logs
+- **Excessive agency** — over-scoped tools
+- **Supply chain** — model/data/plugin provenance
+- **Unbounded consumption** — denial-of-wallet → rate-limit & cap
+
+---
+
+## Bias · privacy · governance
+
+- **Bias** — test disparate outcomes for consequential decisions; human-in-loop; document intended use
+- **Privacy** — data residency/egress, minimization, consent, GDPR/HIPAA; prompts & outputs can be regulated data
+- **Transparency/accountability** — disclose AI + fallibility; keep audit trails that explain a decision
 
 Often legal requirements, not nice-to-haves.
 
 ---
 
-## Shipping checklist
+## Production readiness checklist
 
-- [ ] Golden eval set (run on every change)
-- [ ] Output validation before use
-- [ ] Input/output guardrails
-- [ ] Cost tracked; `max_tokens`; cheap-model routing
-- [ ] No secrets in prompts/logs; PII handled
-- [ ] Least-privilege tools; human approval for risky actions
-- [ ] Fallbacks for failures
-- [ ] Transparency to users
+- [ ] Eval suite that **gates** every change + online sampling
+- [ ] Layered guardrails (input/output/action) + fallbacks
+- [ ] Output validation before any consequential sink
+- [ ] Cost/latency instrumented; routing, caching, `max_tokens`
+- [ ] Injection defenses; ingested content = untrusted
+- [ ] Secrets/PII out of prompts & logs
+- [ ] Least-privilege tools; approval for irreversible actions
+- [ ] Full traces; pinned model/prompt/index versions
+- [ ] Bias/privacy/governance per domain
 
 ---
 
-## Lab + course wrap
+## Course wrap
 
-**Lab:** add a guardrail + a tiny eval harness → make "works / safe" measurable.
+A foundation model is a **powerful, probabilistic, untrusted component**.
+The engineering is the **system around it** — context, retrieval, control,
+evaluation, safety.
 
-🎓 You've gone from *what is AI* → building RAG, agents, and shipping
-responsibly. **Next steps** in the course README.
+> That system is where you add value — and what senior AI roles hire for.
+
+**Lab:** build the guardrail suite + golden-set eval → "works" & "safe" as numbers.

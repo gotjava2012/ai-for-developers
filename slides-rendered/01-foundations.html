@@ -15,84 +15,80 @@
  .nav{position:fixed;bottom:12px;right:16px;color:#1f2a44;background:#fff;
    padding:4px 10px;border-radius:6px;font-size:.9em;opacity:.8}
 </style></head><body>
-<section class="slide"><h1>AI for Developers</h1>
-<h2>Module 1 — Foundations</h2>
-<p>Build the right mental model before writing any AI code.</p></section>
-<section class="slide"><h2>The term soup, settled</h2>
+<section class="slide"><h1>Module 1 — Foundations</h1>
+<h3>An accurate mental model of how modern AI is built and deployed</h3>
+<p>For engineers who ship systems. No software basics; just the parts that change</p>
+<p>your architecture.</p></section>
+<section class="slide"><h2>The shift that matters</h2>
+<ul>
+<li><strong>Classical software</strong> — you author explicit logic</li>
+<li><strong>Machine learning</strong> — you author the <em>objective, data, architecture</em>; optimization</li>
+<p>  fits a <strong>parameterized function</strong> you can&#x27;t fully introspect</p>
+</ul>
+<blockquote>You&#x27;re shipping a <strong>learned function</strong> with opaque internals and a nonzero</blockquote>
+<blockquote>error distribution — not deterministic code.</blockquote>
+<p>Everything hard downstream (eval, guardrails, hallucination, drift) follows from</p>
+<p>that single fact.</p></section>
+<section class="slide"><h2>The parameterized-function model</h2>
 <pre><code>
-AI  ⊃  Machine Learning  ⊃  Deep Learning  ⊃  (Generative AI, LLMs)
+f(x; θ) = layer_n(… layer_2(layer_1(x)))      θ = all weights
+per layer:   h = σ(Wx + b)
 </code></pre>
 <ul>
-<li><strong>AI</strong> — make machines do human-like tasks (umbrella)</li>
-<li><strong>ML</strong> — learn patterns from data instead of hand-coding rules</li>
-<li><strong>Deep Learning</strong> — ML with many-layered neural networks</li>
-<li><strong>Generative AI / LLMs</strong> — generate new text/code/images</li>
-</ul>
-<blockquote>When someone says &quot;AI,&quot; ask: <em>a trained model, or an LLM behind an API?</em></blockquote></section>
-<section class="slide"><h2>Why now?</h2>
-<p>Old ideas + three new ingredients:</p>
-<ul>
-<li><strong>Data</strong> — the internet</li>
-<li><strong>Compute</strong> — GPUs</li>
-<li><strong>The transformer</strong> (2017) — scales with data + compute</li>
-</ul>
-<p>No magic. Just scale meeting one key architecture.</p></section>
-<section class="slide"><h2>The distinction that matters most</h2>
-<h1>Training ≠ Inference</h1></section>
-<section class="slide"><h2>Training — building the model</h2>
-<ul>
-<li>Feed data → model adjusts millions/billions of <strong>parameters</strong></li>
-<li>Expensive, slow, done <strong>rarely</strong> (GPUs, weeks, $$$)</li>
-<li>Output: a <strong>trained model</strong></li>
-</ul>
-<h2>Inference — using the model</h2>
-<ul>
-<li>Input → trained model → output</li>
-<li>Cheap, fast, done <strong>constantly</strong></li>
-<li><strong>This is where 95% of developers work</strong></li>
+<li>σ (ReLU/GELU) is <strong>load-bearing</strong>: without it, any depth collapses to one</li>
+<p>  affine map → only hyperplanes</p>
+<li>With it: <strong>universal function approximator</strong></li>
+<li><strong>Training</strong> = search for θ that fits the data (you&#x27;ll run it in Module 2)</li>
 </ul></section>
-<section class="slide"><h2>The flow</h2>
-<pre><code>
-[ lots of data ]
-      │  TRAINING  (rare, expensive)
-      ▼
-[ trained model ]
-      │  INFERENCE (constant, an API call)
-      ▼
-[ your app&#x27;s output ]
-</code></pre>
-<p>You almost always <strong>use</strong> a model (inference), not train one.</p></section>
-<section class="slide"><h2>What AI is good at</h2>
+<section class="slide"><h2>Training vs. inference — a systems distinction</h2>
+<table>
+<tr><th></th><th>Training</th><th>Inference</th></tr>
+<tr><td>Work</td><td>forward + backward + optimizer state</td><td>forward only</td></tr>
+<tr><td>Memory</td><td>≈ several× \</td><td>θ\</td><td></td><td>≈ \</td><td>θ\</td><td>(+ KV cache)</td></tr>
+<tr><td>Cadence</td><td>rare, offline, batch</td><td>constant, online, latency-bound</td></tr>
+<tr><td>Cost driver</td><td>GPU-hours, data scale</td><td>tokens/requests, SLOs</td></tr>
+<tr><th>You own</th><th>rarely</th><th><strong>almost always</strong></th></tr>
+</table>
+<p>Your leverage is in <strong>how you use</strong> the model, not the weights.</p></section>
+<section class="slide"><h2>Why transformers specifically</h2>
+<p>Not &quot;nets got bigger&quot; — architecture-specific:</p>
 <ul>
-<li>Pattern recognition (images, speech, anomalies)</li>
-<li>Generating &amp; transforming text/code</li>
-<li>Summarizing, classifying, extracting structure</li>
+<li><strong>Self-attention</strong> — every token conditions on every other, in parallel,</li>
+<p>  content-dependent weighting → long-range dependencies</p>
+<li><strong>Parallel across sequence</strong> → saturates accelerators → internet-scale</li>
+<p>  pretraining became economical</p>
+<li>Capability tracks <strong>scaling laws</strong> (loss ↓ as power law in params/data/compute)</li>
 </ul>
-<h2>What it can&#x27;t do</h2>
+<p>Two consequences you live with: <strong>context is quadratic-cost &amp; finite</strong>; failure</p>
+<p>modes are <strong>statistical</strong>, not bugs.</p></section>
+<section class="slide"><h2>A foundation model, stated precisely</h2>
+<p>An LLM is a conditional next-token distribution <strong>P(token | context)</strong>, sampled</p>
+<p>autoregressively.</p>
 <ul>
-<li>Guarantee <strong>truth</strong> (hallucination)</li>
-<li>Know your private data / post-cutoff facts (unless you supply them)</li>
-<li>Be deterministic without guardrails</li>
+<li>&quot;Knowledge&quot; = lossy parametric compression of the corpus — <strong>not</strong> a queryable store</li>
+<li>→ fluent, often right, <strong>confidently wrong at a nonzero rate no prompt removes</strong></li>
+<li>No access to truth / your data / post-cutoff facts unless it&#x27;s <strong>in the context</strong> (→ why RAG exists)</li>
+<li>Sampling is <strong>stochastic</strong>; determinism needs temp 0 + pinned version (and still isn&#x27;t guaranteed)</li>
 </ul></section>
-<section class="slide"><h2>The mental model</h2>
-<blockquote>Treat an LLM like a <strong>brilliant, fast, confident intern</strong></blockquote>
-<blockquote>who sometimes makes things up.</blockquote>
-<blockquote></blockquote>
-<blockquote>Useful everywhere. Trusted nowhere without verification.</blockquote></section>
-<section class="slide"><h2>Where you&#x27;ll spend your time</h2>
+<section class="slide"><h2>The engineering stance</h2>
+<blockquote>Treat model output as an <strong>untrusted, probabilistic input</strong> with a known</blockquote>
+<blockquote>nonzero error rate — constrain it, validate it, evaluate it.</blockquote>
+<p>The same discipline you&#x27;d apply to any unreliable upstream dependency.</p></section>
+<section class="slide"><h2>Where the effort actually goes</h2>
 <ul>
-<li>Inference &amp; prompting</li>
-<li>Grounding with your data (RAG, fine-tuning)</li>
-<li>Agents &amp; tools</li>
-<li>Evals, guardrails, cost, security</li>
-<li>Training (rarely — usually fine-tuning)</li>
-</ul></section>
-<section class="slide"><h2>Lab + next up</h2>
-<p><strong>Lab:</strong> read the key terms, then do the <code>lab/</code> exercise (a no-code concept</p>
-<p>sorting + a first look at a model file).</p>
-<p><strong>Next:</strong> Module 2 — <em>How ML Actually Works</em> → you&#x27;ll run a neural network and</p>
-<p>watch it learn.</p></section>
-<div class="nav"><span id="n">1</span> / 10 &nbsp;(← →)</div>
+<li><strong>Context engineering</strong> — what&#x27;s in the window (dominant quality lever)</li>
+<li><strong>Grounding &amp; customization</strong> — RAG vs fine-tune vs long-context</li>
+<li><strong>Orchestration</strong> — tools, agents, control flow</li>
+<li><strong>Evaluation &amp; reliability</strong> — evals, guardrails, cost/latency, security</li>
+<li><strong>Training/fine-tuning</strong> — rare, targeted, last resort</li>
+</ul>
+<p>Note what&#x27;s #5. You compete on <strong>systems around the model</strong>, not the model.</p></section>
+<section class="slide"><h2>Next</h2>
+<p><strong>Lab:</strong> make &quot;learned function / parameters / inference&quot; concrete; ground the</p>
+<p>scaling intuition (2 params → 1B params, same idea).</p>
+<p><strong>Module 2:</strong> drop a level — run gradient descent, watch θ converge, so training</p>
+<p>is never a black box.</p></section>
+<div class="nav"><span id="n">1</span> / 9 &nbsp;(← →)</div>
 <script>
  let i=0; const s=document.querySelectorAll('.slide');
  function show(x){s[i].classList.remove('active');i=(x+s.length)%s.length;s[i].classList.add('active');document.getElementById('n').textContent=i+1;}

@@ -2,96 +2,103 @@
 marp: true
 theme: default
 paginate: true
-header: "AI for Developers · Module 4 — Giving an LLM Your Own Data"
+header: "AI for Developers · Module 4 — Grounding & Customization"
 ---
 
-# Module 4
-## Giving an LLM Your Own Data
+# Module 4 — Grounding & Customization
+### RAG vs. Fine-Tuning vs. Long-Context
 
-RAG vs. fine-tuning — and build a working RAG system.
-
----
-
-## The problem
-
-A base LLM knows nothing about:
-- your company's docs
-- your codebase
-- anything after its training cutoff
-
-Ask it anyway → "I don't know" or a **hallucination**.
-
-Two fixes: **RAG** and **fine-tuning**.
+The central architectural decision of applied LLM work.
 
 ---
 
-## RAG — Retrieval-Augmented Generation
+## Three levers, different axes
 
-Don't change the model — change its **input**.
+- **RAG** — inject facts into context at inference. Changes the **input**.
+- **Fine-tuning** — shift weights toward behavior/format. Changes the **model**.
+- **Long-context** — more raw material in the window. Changes **how much input**.
 
-**Indexing (once):**
+> RAG & long-context inject **knowledge**. Fine-tuning instills
+> **behavior/skill/format**. They compose.
+
+---
+
+## RAG *is* a search problem
+
 ```
-docs → chunk → embed → store in a vector index
-```
-**Query (every question):**
-```
-question → embed → retrieve top-k similar chunks
-         → stuff into prompt → LLM → grounded answer
+offline:  chunk → embed → vector index
+online:   embed query → top-k → (re-rank) → context → generate (answer-only-from-context)
 ```
 
----
-
-## Why RAG is usually first choice
-
-- **Facts stay current** — just update the docs, no retraining
-- **Cites sources** — show where the answer came from
-- **Cheap & fast** to build
-- **Reduces hallucination** — answers from supplied facts
-
-You'll build this in the lab.
+Quality is dominated by **retrieval**, not generation.
+Embeddings: semantic similarity ≈ geometric proximity (cosine).
+Retrieval = **ANN** (HNSW/IVF): trade a little recall for sublinear latency.
 
 ---
 
-## Fine-tuning
+## What actually determines RAG quality
 
-Actually train the model further → behavior baked into weights.
+- **Chunking** — semantic/structural boundaries > fixed sizes; overlap for straddling content
+- **Embedding model** — domain match > raw size
+- **Retrieval depth k** — ↑recall but ↑noise/cost; there's a peak
+- **Metadata filtering** — pre-filter by source/date/permissions
 
-- Best for **style, tone, format, specialized task**
-- Needs a dataset (hundreds–thousands of examples) + a GPU
-- Redo it when data changes
-
-**LoRA:** freeze the base model, train tiny adapters (<1% of params).
-Fits on a free GPU; adapter is a few MB.
+Big vague chunks → diluted vectors, lost-in-middle. Tiny chunks → no context.
 
 ---
 
-## RAG vs. fine-tuning
+## Retrieval failure modes (where RAG breaks, silently)
 
-| RAG when… | Fine-tune when… |
+- **Semantic mismatch** (question vs statement) → query rewrite / **HyDE**
+- **Lexical gaps** (exact IDs/keywords) → **hybrid search** (vector + BM25)
+- **Weak ranking** (right chunk, ranked low) → **cross-encoder re-ranker** (retrieve 50 → keep 5)
+- **Boundary loss** (answer spans chunks) → overlap / parent-doc retrieval
+- **Stale index** → an ops concern
+
+---
+
+## Evaluate the retriever, not just the answer
+
+IR metrics on a labeled query set:
+
+- **recall@k** — is the right chunk even in the top-k? (**caps** answer quality)
+- **precision@k**, **MRR / nDCG** — is it ranked high?
+
+> You can't fix an answer the retriever never surfaced.
+> Diagnose RAG = separate retrieval failures from generation failures.
+
+---
+
+## Fine-tuning & PEFT — form, not facts
+
+Use for style/format/narrow-skill/latency. **Wrong** for changing facts
+(stale, not attributable).
+
+- **Full FT** — all weights; costly; risks **catastrophic forgetting**
+- **LoRA** — freeze base, train low-rank adapters `ΔW=BA` (r≪dim), <1% params;
+  single-GPU, few-MB swappable adapters
+- **QLoRA** — 4-bit frozen base → large models on commodity GPUs
+- **Data quality is the hard part** — clean, on-distribution examples dominate
+
+---
+
+## The decision
+
+| Need | Reach for |
 |---|---|
-| need **facts/knowledge** | need **style/tone/format** |
-| data **changes often** | behavior is **stable** |
-| must **cite sources** | sources don't matter |
-| ship fast & cheap | prompting + RAG maxed out |
+| current/changing facts + citations | **RAG** |
+| style / format / narrow skill | **Fine-tune (LoRA)** |
+| small self-contained source | **Long-context** |
+| cut latency/cost vs big prompt | **Fine-tune a small model** |
+| facts **and** behavior | **Both** |
 
-> RAG for what it should **know**. Fine-tune for how it should **behave**.
-
----
-
-## The engine: embeddings + vector search
-
-- **Embedding** = text → vector; similar meaning → close vectors
-- **Retrieval** = find nearest vectors (**cosine similarity**)
-- Small data: in-memory exact search (the lab)
-- Production: a **vector DB** (Chroma, FAISS, Qdrant, pgvector)
+> Default: prompting → RAG → (only then) fine-tuning.
 
 ---
 
-## Lab
+## Next
 
-1. Build a **RAG Q&A** over your own docs (`rag-from-scratch`)
-2. Watch it retrieve, then answer with **citations**
-3. Ask something not in the docs → it declines (no hallucination)
-4. *Optional (Colab):* run a **LoRA fine-tune** (`llm-lora-finetune`)
+**Lab:** build RAG, induce a retrieval failure and fix it (hybrid / re-rank /
+chunking), measure **recall@k**; optional Colab LoRA run.
 
-**Next:** Module 5 — Agents & Tool-Calling
+**Module 5:** orchestration — tools, agents, control flow, MCP.

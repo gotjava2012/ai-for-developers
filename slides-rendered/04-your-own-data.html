@@ -15,71 +15,74 @@
  .nav{position:fixed;bottom:12px;right:16px;color:#1f2a44;background:#fff;
    padding:4px 10px;border-radius:6px;font-size:.9em;opacity:.8}
 </style></head><body>
-<section class="slide"><h1>Module 4</h1>
-<h2>Giving an LLM Your Own Data</h2>
-<p>RAG vs. fine-tuning — and build a working RAG system.</p></section>
-<section class="slide"><h2>The problem</h2>
-<p>A base LLM knows nothing about:</p>
+<section class="slide"><h1>Module 4 — Grounding &amp; Customization</h1>
+<h3>RAG vs. Fine-Tuning vs. Long-Context</h3>
+<p>The central architectural decision of applied LLM work.</p></section>
+<section class="slide"><h2>Three levers, different axes</h2>
 <ul>
-<li>your company&#x27;s docs</li>
-<li>your codebase</li>
-<li>anything after its training cutoff</li>
+<li><strong>RAG</strong> — inject facts into context at inference. Changes the <strong>input</strong>.</li>
+<li><strong>Fine-tuning</strong> — shift weights toward behavior/format. Changes the <strong>model</strong>.</li>
+<li><strong>Long-context</strong> — more raw material in the window. Changes <strong>how much input</strong>.</li>
 </ul>
-<p>Ask it anyway → &quot;I don&#x27;t know&quot; or a <strong>hallucination</strong>.</p>
-<p>Two fixes: <strong>RAG</strong> and <strong>fine-tuning</strong>.</p></section>
-<section class="slide"><h2>RAG — Retrieval-Augmented Generation</h2>
-<p>Don&#x27;t change the model — change its <strong>input</strong>.</p>
-<p><strong>Indexing (once):</strong></p>
+<blockquote>RAG &amp; long-context inject <strong>knowledge</strong>. Fine-tuning instills</blockquote>
+<blockquote><strong>behavior/skill/format</strong>. They compose.</blockquote></section>
+<section class="slide"><h2>RAG <em>is</em> a search problem</h2>
 <pre><code>
-docs → chunk → embed → store in a vector index
+offline:  chunk → embed → vector index
+online:   embed query → top-k → (re-rank) → context → generate (answer-only-from-context)
 </code></pre>
-<p><strong>Query (every question):</strong></p>
-<pre><code>
-question → embed → retrieve top-k similar chunks
-         → stuff into prompt → LLM → grounded answer
-</code></pre></section>
-<section class="slide"><h2>Why RAG is usually first choice</h2>
+<p>Quality is dominated by <strong>retrieval</strong>, not generation.</p>
+<p>Embeddings: semantic similarity ≈ geometric proximity (cosine).</p>
+<p>Retrieval = <strong>ANN</strong> (HNSW/IVF): trade a little recall for sublinear latency.</p></section>
+<section class="slide"><h2>What actually determines RAG quality</h2>
 <ul>
-<li><strong>Facts stay current</strong> — just update the docs, no retraining</li>
-<li><strong>Cites sources</strong> — show where the answer came from</li>
-<li><strong>Cheap &amp; fast</strong> to build</li>
-<li><strong>Reduces hallucination</strong> — answers from supplied facts</li>
+<li><strong>Chunking</strong> — semantic/structural boundaries &gt; fixed sizes; overlap for straddling content</li>
+<li><strong>Embedding model</strong> — domain match &gt; raw size</li>
+<li><strong>Retrieval depth k</strong> — ↑recall but ↑noise/cost; there&#x27;s a peak</li>
+<li><strong>Metadata filtering</strong> — pre-filter by source/date/permissions</li>
 </ul>
-<p>You&#x27;ll build this in the lab.</p></section>
-<section class="slide"><h2>Fine-tuning</h2>
-<p>Actually train the model further → behavior baked into weights.</p>
+<p>Big vague chunks → diluted vectors, lost-in-middle. Tiny chunks → no context.</p></section>
+<section class="slide"><h2>Retrieval failure modes (where RAG breaks, silently)</h2>
 <ul>
-<li>Best for <strong>style, tone, format, specialized task</strong></li>
-<li>Needs a dataset (hundreds–thousands of examples) + a GPU</li>
-<li>Redo it when data changes</li>
-</ul>
-<p><strong>LoRA:</strong> freeze the base model, train tiny adapters (&lt;1% of params).</p>
-<p>Fits on a free GPU; adapter is a few MB.</p></section>
-<section class="slide"><h2>RAG vs. fine-tuning</h2>
-<table>
-<tr><th>RAG when…</th><th>Fine-tune when…</th></tr>
-<tr><td>need <strong>facts/knowledge</strong></td><td>need <strong>style/tone/format</strong></td></tr>
-<tr><td>data <strong>changes often</strong></td><td>behavior is <strong>stable</strong></td></tr>
-<tr><td>must <strong>cite sources</strong></td><td>sources don&#x27;t matter</td></tr>
-<tr><th>ship fast &amp; cheap</th><th>prompting + RAG maxed out</th></tr>
-</table>
-<blockquote>RAG for what it should <strong>know</strong>. Fine-tune for how it should <strong>behave</strong>.</blockquote></section>
-<section class="slide"><h2>The engine: embeddings + vector search</h2>
-<ul>
-<li><strong>Embedding</strong> = text → vector; similar meaning → close vectors</li>
-<li><strong>Retrieval</strong> = find nearest vectors (<strong>cosine similarity</strong>)</li>
-<li>Small data: in-memory exact search (the lab)</li>
-<li>Production: a <strong>vector DB</strong> (Chroma, FAISS, Qdrant, pgvector)</li>
+<li><strong>Semantic mismatch</strong> (question vs statement) → query rewrite / <strong>HyDE</strong></li>
+<li><strong>Lexical gaps</strong> (exact IDs/keywords) → <strong>hybrid search</strong> (vector + BM25)</li>
+<li><strong>Weak ranking</strong> (right chunk, ranked low) → <strong>cross-encoder re-ranker</strong> (retrieve 50 → keep 5)</li>
+<li><strong>Boundary loss</strong> (answer spans chunks) → overlap / parent-doc retrieval</li>
+<li><strong>Stale index</strong> → an ops concern</li>
 </ul></section>
-<section class="slide"><h2>Lab</h2>
+<section class="slide"><h2>Evaluate the retriever, not just the answer</h2>
+<p>IR metrics on a labeled query set:</p>
 <ul>
-<li>Build a <strong>RAG Q&amp;A</strong> over your own docs (<code>rag-from-scratch</code>)</li>
-<li>Watch it retrieve, then answer with <strong>citations</strong></li>
-<li>Ask something not in the docs → it declines (no hallucination)</li>
-<li><em>Optional (Colab):</em> run a <strong>LoRA fine-tune</strong> (<code>llm-lora-finetune</code>)</li>
+<li><strong>recall@k</strong> — is the right chunk even in the top-k? (<strong>caps</strong> answer quality)</li>
+<li><strong>precision@k</strong>, <strong>MRR / nDCG</strong> — is it ranked high?</li>
 </ul>
-<p><strong>Next:</strong> Module 5 — Agents &amp; Tool-Calling</p></section>
-<div class="nav"><span id="n">1</span> / 8 &nbsp;(← →)</div>
+<blockquote>You can&#x27;t fix an answer the retriever never surfaced.</blockquote>
+<blockquote>Diagnose RAG = separate retrieval failures from generation failures.</blockquote></section>
+<section class="slide"><h2>Fine-tuning &amp; PEFT — form, not facts</h2>
+<p>Use for style/format/narrow-skill/latency. <strong>Wrong</strong> for changing facts</p>
+<p>(stale, not attributable).</p>
+<ul>
+<li><strong>Full FT</strong> — all weights; costly; risks <strong>catastrophic forgetting</strong></li>
+<li><strong>LoRA</strong> — freeze base, train low-rank adapters <code>ΔW=BA</code> (r≪dim), &lt;1% params;</li>
+<p>  single-GPU, few-MB swappable adapters</p>
+<li><strong>QLoRA</strong> — 4-bit frozen base → large models on commodity GPUs</li>
+<li><strong>Data quality is the hard part</strong> — clean, on-distribution examples dominate</li>
+</ul></section>
+<section class="slide"><h2>The decision</h2>
+<table>
+<tr><th>Need</th><th>Reach for</th></tr>
+<tr><td>current/changing facts + citations</td><td><strong>RAG</strong></td></tr>
+<tr><td>style / format / narrow skill</td><td><strong>Fine-tune (LoRA)</strong></td></tr>
+<tr><td>small self-contained source</td><td><strong>Long-context</strong></td></tr>
+<tr><td>cut latency/cost vs big prompt</td><td><strong>Fine-tune a small model</strong></td></tr>
+<tr><th>facts <strong>and</strong> behavior</th><th><strong>Both</strong></th></tr>
+</table>
+<blockquote>Default: prompting → RAG → (only then) fine-tuning.</blockquote></section>
+<section class="slide"><h2>Next</h2>
+<p><strong>Lab:</strong> build RAG, induce a retrieval failure and fix it (hybrid / re-rank /</p>
+<p>chunking), measure <strong>recall@k</strong>; optional Colab LoRA run.</p>
+<p><strong>Module 5:</strong> orchestration — tools, agents, control flow, MCP.</p></section>
+<div class="nav"><span id="n">1</span> / 9 &nbsp;(← →)</div>
 <script>
  let i=0; const s=document.querySelectorAll('.slide');
  function show(x){s[i].classList.remove('active');i=(x+s.length)%s.length;s[i].classList.add('active');document.getElementById('n').textContent=i+1;}

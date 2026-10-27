@@ -5,79 +5,101 @@ paginate: true
 header: "AI for Developers · Module 3 — LLMs for Developers"
 ---
 
-# Module 3
-## LLMs for Developers
-
-What an LLM really does — and your first call from code.
+# Module 3 — LLMs for Developers
+### Enough mechanism to debug, cost, and optimize one
 
 ---
 
-## What an LLM actually does
+## The core object
 
-> Given some text, **predict the next token.**
+`P(next_token | tokens_so_far)` → sample → append → repeat
 
-- A **token** ≈ ¾ of a word
-- Output a probability for every possible next token → pick one → repeat
-- Whole paragraphs = next-token prediction, over and over
+```
+context → model → logits over vocab → sampling → next token → (repeat)
+```
 
-It is **not** looking things up. It's generating likely continuations.
-
----
-
-## The knobs you'll touch
-
-- **Context window** — max tokens it can see (prompt + output)
-- **Temperature** — randomness (0 = focused, high = creative)
-- **Max tokens** — output length cap
-- **System prompt** — sets role & rules (your main lever)
-- **Stop sequences** — halt generation
-
-💸 You pay per token — **input and output**. Token-awareness = a core skill.
+- Generation is **sequential, O(tokens)** → output latency ∝ tokens produced
+- **No cross-request state** unless you supply it — chat "memory" is prior turns
+  re-sent (and re-paid) every turn
 
 ---
 
-## Prompting is engineering
+## Tokenization — the unit of everything
 
-1. **System prompt** sets role + rules
-2. Be **specific about format** (JSON? list? show an example)
-3. Give **examples** (few-shot) — often beats instructions
-4. Put instruction first; **delimit** the data clearly
-5. "Think step by step" for reasoning tasks
+Models see **tokens** (BPE subwords), not chars/words. Vocab ~50k–200k.
 
-Vague prompt → vague output. Specificity is the game.
-
----
-
-## Hallucination
-
-LLMs generate *plausible* text, not *retrieved true* text.
-→ They state false things **confidently**.
-
-Not fully fixable — **manage** it:
-- Ground with real data (**RAG**, Module 4)
-- Ask for sources & verify
-- Lower temperature for facts
-- Never auto-trust output
-
-> #1 beginner mistake: assuming the output is true.
+- Content-dependent: English ≈1.3 tok/word; **code/JSON/non-English cost more**
+- Context limits, pricing, latency are **all** token-denominated
+- Explains classic failures: char-counting, digit arithmetic, string reversal —
+  the model never sees characters
 
 ---
 
-## Local vs. hosted
+## Context window = hard, quadratic-cost resource
 
-- **Hosted API** (OpenAI/Anthropic) — easiest, most capable, pay-per-token
-- **Local** (Ollama) — free, private, offline, smaller models
-- **Open-weight** (Llama/Qwen) — download, run, or fine-tune
+Attention ≈ **O(n²)** in length. The window must hold:
+system + instructions + few-shot + retrieved evidence + history + output room.
 
-Labs default to **Ollama** (free/offline) — same code pattern as an API.
+- Bigger ≠ free: ↑latency, ↑cost, and often ↓quality
+- **Lost-in-the-middle**: better attention at the ends than the middle
+- Context management (truncate / summarize / retrieve / order) is real engineering
 
 ---
 
-## Lab
+## Sampling controls — what the knobs do
 
-1. Make your **first LLM call** from code (Ollama or an API)
-2. Change **temperature** — watch output vary
-3. Improve a **prompt** and compare results
-4. **Trigger a hallucination** on purpose
+- **Temperature** — scales logits; T→0 ≈ greedy, high T flattens (diverse, error-prone)
+- **top-p (nucleus)** — smallest set with cumulative prob ≥ p
+- **top-k** — restrict to k most probable
+- **frequency/presence penalties** — curb repetition
+- **stop / max_tokens** — hard termination & cost bound
 
-**Next:** Module 4 — Giving an LLM Your Own Data (RAG & fine-tuning)
+> Determinism needs T=0 **and** pinned version — and still isn't guaranteed.
+
+---
+
+## Prompting = context engineering
+
+- **System prompt** — persistent rules / output contract / refusal behavior
+- **Structured output** — schema + exemplar + provider JSON/tool mode
+- **Few-shot** — 2–5 examples steer the distribution > prose instructions
+- **Delimit instructions vs. data** — first defense vs. prompt injection
+- **CoT / decomposition** — improves multi-step; can hide or offload to cheaper model
+
+Expect & test: instruction drift, phrasing/order sensitivity, silent format breaks.
+
+---
+
+## Hallucination, precisely
+
+Model samples `P(plausible)` ≠ `P(true)` → fabrication is **intrinsic**, not a bug.
+
+Manage rate + blast radius (by leverage):
+1. **Ground it** (RAG) — highest leverage
+2. **Constrain output** — schemas, enums, validated tool args
+3. **Lower temperature** for facts
+4. **Verify** — citations, cross-check
+5. **Evaluate** — measure fabrication rate, track across changes
+
+> Put the cost of a wrong answer behind a gate proportional to that cost.
+
+---
+
+## Deployment surface — tradeoffs
+
+- **Hosted frontier** — top capability, per-token $, data egress, vendor lock
+- **Open-weight self-host** — control/privacy/fixed cost/fine-tunable; you own ops
+- **Local** (Ollama/llama.cpp) — free, private, offline, smaller/weaker
+- **Quantization** (8/4-bit) — small quality hit for big memory/latency win
+
+Increasingly a **routing** decision: cheap for easy, frontier for hard.
+
+---
+
+## Next
+
+**Lab:** drive a model from code; watch prefill vs decode latency; move
+temperature/top-p; force structured output; reproduce a fabrication.
+
+**Module 4:** grounding & customization — RAG vs fine-tuning, with failure modes
+and eval metrics.

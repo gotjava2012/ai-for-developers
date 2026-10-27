@@ -15,71 +15,79 @@
  .nav{position:fixed;bottom:12px;right:16px;color:#1f2a44;background:#fff;
    padding:4px 10px;border-radius:6px;font-size:.9em;opacity:.8}
 </style></head><body>
-<section class="slide"><h1>Module 6</h1>
-<h2>Building Real, Responsible AI Apps</h2>
-<p>From cool demo → trustworthy, shippable feature.</p></section>
-<section class="slide"><h2>Evals — does it even work?</h2>
-<p>LLMs are non-deterministic → exact-match tests don&#x27;t fit.</p>
-<p>Measure <strong>quality</strong> instead:</p>
+<section class="slide"><h1>Module 6 — Production &amp; Responsible AI Engineering</h1>
+<h3>The discipline that separates a demo from a trustworthy system</h3></section>
+<section class="slide"><h2>Evaluation — hardest, most skipped</h2>
+<p>Non-deterministic, open-ended output → no exact-match tests. Build an **eval</p>
+<p>system<strong> that </strong>gates changes**:</p>
 <ul>
-<li><strong>Golden set</strong> — fixed inputs + known-good expectations</li>
-<li><strong>Rule/assertion checks</strong> — valid JSON? required fields? cites a source?</li>
-<li><strong>Similarity / keyword</strong> — are the key facts present?</li>
-<li><strong>LLM-as-judge</strong> — another model scores (validate it)</li>
-<li><strong>Human review</strong> — gold standard for high-stakes</li>
+<li><strong>Golden sets</strong> — curated fixtures = regression suite</li>
+<li><strong>Programmatic checks</strong> — schema, required fields, must-cite, forbidden content</li>
+<li><strong>Reference metrics</strong> — exact match / F1 / embedding similarity</li>
+<li><strong>LLM-as-judge</strong> — scales, but biased + nondeterministic → <strong>validate vs humans</strong>, pin the judge</li>
+<li><strong>Human eval</strong> — ground truth for high-stakes</li>
+</ul></section>
+<section class="slide"><h2>Offline vs online</h2>
+<ul>
+<li><strong>Offline</strong> evals gate deploys (quality CI)</li>
+<li><strong>Online</strong> — A/B, user signals, trace sampling — catches drift offline misses</li>
 </ul>
-<blockquote>Even 20 examples beats vibes. Build evals early.</blockquote></section>
-<section class="slide"><h2>Guardrails — constrain in &amp; out</h2>
+<blockquote>The question for any number: *which dataset, which metric, does it gate</blockquote>
+<blockquote>releases?* Unmeasured quality = unmonitored production change.</blockquote></section>
+<section class="slide"><h2>Guardrails — layered control architecture</h2>
 <ul>
-<li><strong>Input</strong> — block prompt injection, PII, off-topic/abuse</li>
-<li><strong>Output</strong> — schema/JSON validation, forbidden-content filter, &quot;must cite,&quot;</li>
-<p>  length, groundedness</p>
-<li><strong>Fallbacks</strong> — safe default when a guardrail trips</li>
+<li><strong>Input</strong> — injection detect, PII redaction, topic/abuse, size limits</li>
+<li><strong>Output</strong> — schema/type, grounding/faithfulness, toxicity/PII, policy</li>
+<li><strong>Action</strong> — authz, allow-lists, confirmation/human-in-loop, spend caps</li>
+<li><strong>Fallbacks</strong> — retry / degrade / refuse / escalate (no fallback = outage)</li>
 </ul>
-<blockquote>Never pipe raw LLM output into something consequential</blockquote>
-<blockquote>(DB write, email, shell) without validating it.</blockquote></section>
-<section class="slide"><h2>Cost &amp; latency</h2>
+<blockquote>Never route raw output into a consequential sink (DB/shell/email/pay) without</blockquote>
+<blockquote>validation proportional to the cost of being wrong.</blockquote></section>
+<section class="slide"><h2>Cost &amp; latency engineering</h2>
 <ul>
-<li><strong>Route by difficulty</strong> — cheap model for easy, big model for hard</li>
-<li><strong>Trim prompts/context</strong> — shorter = cheaper</li>
-<li><strong>Cache</strong> repeated queries/embeddings</li>
-<li><strong>Stream</strong> tokens → better perceived latency</li>
-<li><strong>Set <code>max_tokens</code></strong> — cap runaway cost</li>
+<li><strong>Model routing / cascade</strong> — cheap model for easy, frontier for hard (biggest lever)</li>
+<li><strong>Context economy</strong> — trim chunks, summarize history, compress prompts</li>
+<li><strong>Caching</strong> — response (exact+semantic), embeddings, prompt/KV</li>
+<li><strong>Streaming</strong> — collapse <em>perceived</em> latency</li>
+<li><strong><code>max_tokens</code></strong>, batching, async</li>
 </ul>
-<blockquote>Track cost per request from day one.</blockquote></section>
-<section class="slide"><h2>Security — AI-specific risks</h2>
+<p>Instrument <strong>cost + latency per request from day one.</strong></p></section>
+<section class="slide"><h2>LLM security surface (OWASP LLM Top 10)</h2>
 <ul>
-<li><strong>Prompt injection</strong> — hostile instructions in untrusted content</li>
-<p>  → treat all external content as untrusted; separate instructions from data</p>
-<li><strong>Data leakage</strong> — no secrets in prompts; redact PII; careful logging</li>
-<li><strong>Insecure output handling</strong> — output in SQL/shell/HTML → validate &amp; escape</li>
-<li><strong>Excessive agency</strong> — least privilege + human approval</li>
-</ul>
-<p>(≈ OWASP Top 10 for LLM apps)</p></section>
-<section class="slide"><h2>Bias, fairness &amp; privacy</h2>
+<li><strong>Prompt injection (direct &amp; indirect)</strong> — untrusted input <em>and</em> ingested</li>
+<p>  content (RAG/tools/pages); no prompt fully prevents it</p>
+<li><strong>Insecure output handling</strong> — output → SQL/shell/HTML/code = injection</li>
+<li><strong>Sensitive-info disclosure</strong> — secrets in prompts, PII in logs</li>
+<li><strong>Excessive agency</strong> — over-scoped tools</li>
+<li><strong>Supply chain</strong> — model/data/plugin provenance</li>
+<li><strong>Unbounded consumption</strong> — denial-of-wallet → rate-limit &amp; cap</li>
+</ul></section>
+<section class="slide"><h2>Bias · privacy · governance</h2>
 <ul>
-<li><strong>Bias</strong> — models mirror training data; test disparate outcomes; human in the</li>
-<p>  loop for consequential decisions</p>
-<li><strong>Privacy</strong> — know where data goes; minimize; comply (GDPR…)</li>
-<li><strong>Transparency</strong> — tell users it&#x27;s AI and that it can be wrong</li>
+<li><strong>Bias</strong> — test disparate outcomes for consequential decisions; human-in-loop; document intended use</li>
+<li><strong>Privacy</strong> — data residency/egress, minimization, consent, GDPR/HIPAA; prompts &amp; outputs can be regulated data</li>
+<li><strong>Transparency/accountability</strong> — disclose AI + fallibility; keep audit trails that explain a decision</li>
 </ul>
 <p>Often legal requirements, not nice-to-haves.</p></section>
-<section class="slide"><h2>Shipping checklist</h2>
+<section class="slide"><h2>Production readiness checklist</h2>
 <ul>
-<li>[ ] Golden eval set (run on every change)</li>
-<li>[ ] Output validation before use</li>
-<li>[ ] Input/output guardrails</li>
-<li>[ ] Cost tracked; <code>max_tokens</code>; cheap-model routing</li>
-<li>[ ] No secrets in prompts/logs; PII handled</li>
-<li>[ ] Least-privilege tools; human approval for risky actions</li>
-<li>[ ] Fallbacks for failures</li>
-<li>[ ] Transparency to users</li>
+<li>[ ] Eval suite that <strong>gates</strong> every change + online sampling</li>
+<li>[ ] Layered guardrails (input/output/action) + fallbacks</li>
+<li>[ ] Output validation before any consequential sink</li>
+<li>[ ] Cost/latency instrumented; routing, caching, <code>max_tokens</code></li>
+<li>[ ] Injection defenses; ingested content = untrusted</li>
+<li>[ ] Secrets/PII out of prompts &amp; logs</li>
+<li>[ ] Least-privilege tools; approval for irreversible actions</li>
+<li>[ ] Full traces; pinned model/prompt/index versions</li>
+<li>[ ] Bias/privacy/governance per domain</li>
 </ul></section>
-<section class="slide"><h2>Lab + course wrap</h2>
-<p><strong>Lab:</strong> add a guardrail + a tiny eval harness → make &quot;works / safe&quot; measurable.</p>
-<p>🎓 You&#x27;ve gone from <em>what is AI</em> → building RAG, agents, and shipping</p>
-<p>responsibly. <strong>Next steps</strong> in the course README.</p></section>
-<div class="nav"><span id="n">1</span> / 8 &nbsp;(← →)</div>
+<section class="slide"><h2>Course wrap</h2>
+<p>A foundation model is a <strong>powerful, probabilistic, untrusted component</strong>.</p>
+<p>The engineering is the <strong>system around it</strong> — context, retrieval, control,</p>
+<p>evaluation, safety.</p>
+<blockquote>That system is where you add value — and what senior AI roles hire for.</blockquote>
+<p><strong>Lab:</strong> build the guardrail suite + golden-set eval → &quot;works&quot; &amp; &quot;safe&quot; as numbers.</p></section>
+<div class="nav"><span id="n">1</span> / 9 &nbsp;(← →)</div>
 <script>
  let i=0; const s=document.querySelectorAll('.slide');
  function show(x){s[i].classList.remove('active');i=(x+s.length)%s.length;s[i].classList.add('active');document.getElementById('n').textContent=i+1;}

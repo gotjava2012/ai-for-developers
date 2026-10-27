@@ -15,69 +15,73 @@
  .nav{position:fixed;bottom:12px;right:16px;color:#1f2a44;background:#fff;
    padding:4px 10px;border-radius:6px;font-size:.9em;opacity:.8}
 </style></head><body>
-<section class="slide"><h1>Module 2</h1>
-<h2>How ML Actually Works</h2>
-<p>The training loop — and watching a model learn, live.</p></section>
-<section class="slide"><h2>The one-sentence version</h2>
-<blockquote>ML = **adjust a model&#x27;s parameters over and over until its predictions</blockquote>
-<blockquote>stop being wrong.**</blockquote>
-<p>Everything else is detail.</p></section>
-<section class="slide"><h2>Four ingredients</h2>
-<ul>
-<li><strong>Data</strong> — inputs (features X) + correct answers (labels y)</li>
-<li><strong>Model</strong> — a function with adjustable <strong>parameters</strong></li>
-<li><strong>Loss</strong> — a number: how wrong are we? (lower = better)</li>
-<li><strong>Optimizer</strong> — the rule that nudges parameters (gradient descent)</li>
-</ul></section>
-<section class="slide"><h2>The training loop (heartbeat of all ML)</h2>
+<section class="slide"><h1>Module 2 — How ML Actually Works</h1>
+<h3>The learned function, made concrete</h3>
+<p>Training as optimization — at the level of what&#x27;s actually computed.</p></section>
+<section class="slide"><h2>Training = optimization</h2>
 <pre><code>
-repeat (each pass = one &quot;epoch&quot;):
-   1. FORWARD   inputs → predictions
-   2. LOSS      how wrong?
-   3. BACKWARD  each parameter&#x27;s share of the error (gradients)
-   4. UPDATE    nudge parameters to reduce loss
+minimize over θ:  L(θ) = (1/N) Σ loss(f(xᵢ;θ), yᵢ) + regularization
 </code></pre>
-<p>Thousands of times → loss falls → that&#x27;s <strong>learning</strong>.</p></section>
-<section class="slide"><h2>Gradient descent, intuitively</h2>
-<p>Foggy hill. Want the lowest point.</p>
-<p>Feel which way is downhill → step → repeat.</p>
 <ul>
-<li><strong>Gradient</strong> = which way is downhill for the loss</li>
-<li><strong>Learning rate</strong> = how big a step</li>
-<li>too small → slow</li>
-<li>too big → overshoot / diverge</li>
+<li><strong>loss</strong> defines what &quot;wrong&quot; means (cross-entropy, MSE)</li>
+<li><strong>L(θ)</strong> = empirical risk = mean training loss</li>
+<li>High-dimensional, <strong>non-convex</strong> → no closed form, no global-min guarantee</li>
+<li>→ iterative gradient methods, accept good local minima</li>
 </ul></section>
-<section class="slide"><h2>Why non-linearity matters</h2>
-<p>Only straight-line math → can only learn straight lines.</p>
-<p>(100 linear layers still = a line.)</p>
-<p>Add a <strong>non-linear activation</strong> (ReLU) between layers → the network can bend to</p>
-<p>fit complex patterns.</p>
-<p><strong>You&#x27;ll prove it:</strong> spiral dataset →</p>
-<p>with non-linearity ~99%, without it ~50%.</p></section>
-<section class="slide"><h2>The discipline that saves you: train/test split</h2>
+<section class="slide"><h2>Gradient descent, concretely</h2>
+<pre><code>
+θ ← θ − η · ∇L(θ)
+</code></pre>
+<p>∇L = for each parameter, how L moves if you nudge it. η = learning rate.</p>
 <ul>
-<li>Model can <strong>memorize</strong> training data → 100% there, useless on new data</li>
-<li>That&#x27;s <strong>overfitting</strong></li>
-<li>So <strong>hold out</strong> a test set the model never sees → evaluate on <em>that</em></li>
-</ul>
-<blockquote>&quot;99% on training, 61% on test&quot; = memorized, not learned.</blockquote>
-<blockquote>The <strong>test</strong> score is the real one.</blockquote></section>
-<section class="slide"><h2>Kinds of ML</h2>
+<li><strong>Mini-batch</strong> (32–1024): cheaper than full-batch; its <strong>noise helps</strong> escape bad minima</li>
+<li><strong>Adam/AdamW</strong>: per-parameter adaptive steps (tracks grad mean+variance)</li>
+<p>  → &quot;just works&quot;; costs ~2× params in optimizer state (why train memory ≫ inference)</p>
+<li><strong>LR schedule</strong> (warmup→decay): the highest-impact hyperparameter</li>
+</ul></section>
+<section class="slide"><h2>Backprop = chain rule, systematized</h2>
 <ul>
-<li><strong>Supervised</strong> — labeled X → y (classification, regression) ← most common</li>
-<li><strong>Unsupervised</strong> — find structure, no labels (clustering, embeddings)</li>
-<li><strong>Reinforcement</strong> — learn by reward/trial</li>
+<li><strong>Forward:</strong> compute f(x;θ) + loss, cache activations</li>
+<li><strong>Backward:</strong> propagate ∂L/∂output back through the graph, multiply local</li>
+<p>  Jacobians → ∂L/∂θ for every parameter, ≈ cost of one forward pass</p>
 </ul>
-<p>LLMs = &quot;predict the next token&quot; (supervised) + human-feedback tuning —</p>
-<p>same loop, enormous scale.</p></section>
-<section class="slide"><h2>Lab</h2>
+<p>Frameworks do this via <strong>autograd</strong> — you write only the forward pass.</p>
+<p>(Lab implements it by hand once, so autograd is never magic.)</p>
+<p>Clean result you&#x27;ll see: <code>∂L/∂logits = softmax(logits) − onehot(y)</code></p></section>
+<section class="slide"><h2>Generalization is the real goal</h2>
+<p>Training loss is a <strong>proxy</strong>. You want low error on <strong>unseen</strong> data.</p>
 <ul>
-<li>Run <code>neural-net-from-scratch</code> → watch loss fall, accuracy rise</li>
-<li>Remove the non-linearity → watch it collapse to ~50%</li>
-<li>Run <code>ml-training-pipeline</code> → see train vs. test honesty</li>
+<li>Enough capacity → can <strong>memorize</strong> (train loss ~0, learns nothing) = <strong>overfit</strong></li>
+<li>Too little → <strong>underfit</strong>. You navigate the <strong>bias–variance tradeoff</strong></li>
+<li><strong>Regularization</strong> trades train-fit for generalization: weight decay, dropout,</li>
+<p>  early stopping, augmentation</p>
+</ul></section>
+<section class="slide"><h2>The integrity protocol: train / val / test</h2>
+<ul>
+<li><strong>train</strong> — fit θ</li>
+<li><strong>validation</strong> — tune hyperparameters</li>
+<li><strong>test</strong> — touched <strong>last and rarely</strong>; report once</li>
 </ul>
-<p><strong>Next:</strong> Module 3 — LLMs for Developers (your first LLM call)</p></section>
-<div class="nav"><span id="n">1</span> / 9 &nbsp;(← →)</div>
+<blockquote>Consult the test set repeatedly → it leaks → it&#x27;s no longer an honest estimate.</blockquote>
+<p>Any accuracy number without &quot;which split, how many looks?&quot; is meaningless.</p></section>
+<section class="slide"><h2>How this scales to LLMs</h2>
+<ul>
+<li><strong>Pretraining:</strong> self-supervised next-token prediction (label = next token → no</li>
+<p>  manual labeling → internet scale)</p>
+<li><strong>Alignment:</strong> SFT on instruction/response, then preference optimization (RLHF/DPO)</li>
+<li>Still gradient descent on a loss — different objective, different data</li>
+<li>Train/test discipline here = <strong>LLM evals</strong> later (Module 6)</li>
+</ul></section>
+<section class="slide"><h2>Next</h2>
+<p><strong>Lab:</strong></p>
+<ul>
+<li>Run a from-scratch net → watch L(θ) fall as θ converges</li>
+<li>Kill the non-linearity → accuracy collapses (empirical proof)</li>
+<li>Run a real train/val/test pipeline → read precision/recall/confusion matrix</li>
+</ul>
+<p><strong>Module 3:</strong> LLMs — tokenization, attention cost, sampling, and prompting as</p>
+<p>context engineering.</p></section>
+<div class="nav"><span id="n">1</span> / 8 &nbsp;(← →)</div>
 <script>
  let i=0; const s=document.querySelectorAll('.slide');
  function show(x){s[i].classList.remove('active');i=(x+s.length)%s.length;s[i].classList.add('active');document.getElementById('n').textContent=i+1;}

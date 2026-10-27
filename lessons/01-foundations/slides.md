@@ -5,113 +5,108 @@ paginate: true
 header: "AI for Developers · Module 1 — Foundations"
 ---
 
-# AI for Developers
-## Module 1 — Foundations
+# Module 1 — Foundations
+### An accurate mental model of how modern AI is built and deployed
 
-Build the right mental model before writing any AI code.
+For engineers who ship systems. No software basics; just the parts that change
+your architecture.
 
 ---
 
-## The term soup, settled
+## The shift that matters
+
+- **Classical software** — you author explicit logic
+- **Machine learning** — you author the *objective, data, architecture*; optimization
+  fits a **parameterized function** you can't fully introspect
+
+> You're shipping a **learned function** with opaque internals and a nonzero
+> error distribution — not deterministic code.
+
+Everything hard downstream (eval, guardrails, hallucination, drift) follows from
+that single fact.
+
+---
+
+## The parameterized-function model
 
 ```
-AI  ⊃  Machine Learning  ⊃  Deep Learning  ⊃  (Generative AI, LLMs)
+f(x; θ) = layer_n(… layer_2(layer_1(x)))      θ = all weights
+per layer:   h = σ(Wx + b)
 ```
 
-- **AI** — make machines do human-like tasks (umbrella)
-- **ML** — learn patterns from data instead of hand-coding rules
-- **Deep Learning** — ML with many-layered neural networks
-- **Generative AI / LLMs** — generate new text/code/images
-
-> When someone says "AI," ask: *a trained model, or an LLM behind an API?*
+- σ (ReLU/GELU) is **load-bearing**: without it, any depth collapses to one
+  affine map → only hyperplanes
+- With it: **universal function approximator**
+- **Training** = search for θ that fits the data (you'll run it in Module 2)
 
 ---
 
-## Why now?
+## Training vs. inference — a systems distinction
 
-Old ideas + three new ingredients:
+| | Training | Inference |
+|---|---|---|
+| Work | forward + backward + optimizer state | forward only |
+| Memory | ≈ several× \|θ\| | ≈ \|θ\| (+ KV cache) |
+| Cadence | rare, offline, batch | constant, online, latency-bound |
+| Cost driver | GPU-hours, data scale | tokens/requests, SLOs |
+| You own | rarely | **almost always** |
 
-1. **Data** — the internet
-2. **Compute** — GPUs
-3. **The transformer** (2017) — scales with data + compute
-
-No magic. Just scale meeting one key architecture.
-
----
-
-## The distinction that matters most
-
-# Training ≠ Inference
+Your leverage is in **how you use** the model, not the weights.
 
 ---
 
-## Training — building the model
+## Why transformers specifically
 
-- Feed data → model adjusts millions/billions of **parameters**
-- Expensive, slow, done **rarely** (GPUs, weeks, $$$)
-- Output: a **trained model**
+Not "nets got bigger" — architecture-specific:
 
-## Inference — using the model
+- **Self-attention** — every token conditions on every other, in parallel,
+  content-dependent weighting → long-range dependencies
+- **Parallel across sequence** → saturates accelerators → internet-scale
+  pretraining became economical
+- Capability tracks **scaling laws** (loss ↓ as power law in params/data/compute)
 
-- Input → trained model → output
-- Cheap, fast, done **constantly**
-- **This is where 95% of developers work**
-
----
-
-## The flow
-
-```
-[ lots of data ]
-      │  TRAINING  (rare, expensive)
-      ▼
-[ trained model ]
-      │  INFERENCE (constant, an API call)
-      ▼
-[ your app's output ]
-```
-
-You almost always **use** a model (inference), not train one.
+Two consequences you live with: **context is quadratic-cost & finite**; failure
+modes are **statistical**, not bugs.
 
 ---
 
-## What AI is good at
+## A foundation model, stated precisely
 
-- Pattern recognition (images, speech, anomalies)
-- Generating & transforming text/code
-- Summarizing, classifying, extracting structure
+An LLM is a conditional next-token distribution **P(token | context)**, sampled
+autoregressively.
 
-## What it can't do
-
-- Guarantee **truth** (hallucination)
-- Know your private data / post-cutoff facts (unless you supply them)
-- Be deterministic without guardrails
+- "Knowledge" = lossy parametric compression of the corpus — **not** a queryable store
+- → fluent, often right, **confidently wrong at a nonzero rate no prompt removes**
+- No access to truth / your data / post-cutoff facts unless it's **in the context** (→ why RAG exists)
+- Sampling is **stochastic**; determinism needs temp 0 + pinned version (and still isn't guaranteed)
 
 ---
 
-## The mental model
+## The engineering stance
 
-> Treat an LLM like a **brilliant, fast, confident intern**
-> who sometimes makes things up.
->
-> Useful everywhere. Trusted nowhere without verification.
+> Treat model output as an **untrusted, probabilistic input** with a known
+> nonzero error rate — constrain it, validate it, evaluate it.
 
----
-
-## Where you'll spend your time
-
-1. Inference & prompting
-2. Grounding with your data (RAG, fine-tuning)
-3. Agents & tools
-4. Evals, guardrails, cost, security
-5. Training (rarely — usually fine-tuning)
+The same discipline you'd apply to any unreliable upstream dependency.
 
 ---
 
-## Lab + next up
+## Where the effort actually goes
 
-**Lab:** read the key terms, then do the `lab/` exercise (a no-code concept
-sorting + a first look at a model file).
+1. **Context engineering** — what's in the window (dominant quality lever)
+2. **Grounding & customization** — RAG vs fine-tune vs long-context
+3. **Orchestration** — tools, agents, control flow
+4. **Evaluation & reliability** — evals, guardrails, cost/latency, security
+5. **Training/fine-tuning** — rare, targeted, last resort
 
-**Next:** Module 2 — *How ML Actually Works* → you'll run a neural network and
-watch it learn.
+Note what's #5. You compete on **systems around the model**, not the model.
+
+---
+
+## Next
+
+**Lab:** make "learned function / parameters / inference" concrete; ground the
+scaling intuition (2 params → 1B params, same idea).
+
+**Module 2:** drop a level — run gradient descent, watch θ converge, so training
+is never a black box.
