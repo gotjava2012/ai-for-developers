@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Module 9 — AI Beats the Chrome Dino Game (live)</title>
+<style>
+  :root { --ink:#1f2a44; --grn:#2a7d5f; --red:#c0392b; --amber:#f0a500; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#1f2a44; color:#eef1f6;
+         font-family:-apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap { max-width:1000px; margin:0 auto; padding:24px 20px 40px; }
+  h1 { font-size:1.5em; margin:0 0 4px; }
+  p.sub { margin:0 0 18px; color:#aeb9d4; }
+  canvas { background:#f7f7f7; border-radius:10px; display:block; width:100%;
+           border:3px solid #0f1626; image-rendering:pixelated; }
+  .hud { display:flex; flex-wrap:wrap; gap:18px; align-items:center;
+         margin:14px 0; font-size:1.05em; }
+  .stat { background:#2a3a5c; border-radius:8px; padding:8px 14px; }
+  .stat b { color:#fff; font-size:1.2em; }
+  .bar { flex:1; min-width:200px; height:14px; background:#2a3a5c;
+         border-radius:7px; overflow:hidden; }
+  .bar > div { height:100%; width:0; background:var(--amber);
+               transition:width .25s; }
+  .controls { display:flex; gap:10px; flex-wrap:wrap; margin:10px 0 0; }
+  button { background:var(--grn); color:#fff; border:0; border-radius:8px;
+           padding:10px 16px; font-size:1em; cursor:pointer; }
+  button.alt { background:#3a5c99; } button:disabled{opacity:.5;cursor:default;}
+  .legend { color:#aeb9d4; font-size:.92em; margin-top:10px; line-height:1.5; }
+  .phase { color:var(--amber); font-weight:bold; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🦖 An AI learns to beat the Chrome dino game</h1>
+  <p class="sub">Same Q-learning as the Python lab (Module 8 &amp; 9) — now with real
+     Canvas graphics, running live in your browser.</p>
+
+  <div class="hud">
+    <div class="stat">phase <b id="phase" class="phase">idle</b></div>
+    <div class="stat">games trained <b id="games">0</b></div>
+    <div class="stat">score <b id="score">0</b></div>
+    <div class="stat">best <b id="best">0</b></div>
+    <div class="stat">speed <b id="speed">3.0</b></div>
+    <div class="bar"><div id="eps"></div></div>
+  </div>
+
+  <canvas id="c" width="900" height="240"></canvas>
+
+  <div class="controls">
+    <button id="run">▶ Watch it learn &amp; play</button>
+    <button id="fast" class="alt">⏩ Fast-train 2000 games (headless)</button>
+    <button id="reset" class="alt">↺ Reset brain</button>
+  </div>
+
+  <p class="legend">
+    Green dino <b>jumps</b> cacti (brown) and <b>ducks</b> birds (dark).
+    It starts knowing nothing and learns from reward alone (+1 per frame, −100 on
+    crash). The <span style="color:var(--amber)">amber bar</span> is ε (exploration):
+    high while learning, low once it trusts its policy.
+  </p>
+</div>
+
+<script>
+// ============================================================================
+//  Q-learning dino — a faithful JS port of lessons/09/lab/dino_q_learning.py
+// ============================================================================
+const RUN=0, JUMP=1, DUCK=2, ACTIONS=[RUN,JUMP,DUCK];
+const GROUND=0, GRAVITY=0.9, JUMP_V=9.0, START_SPEED=3.0, SPEED_RAMP=0.0015;
+
+function randint(a,b){ return a + Math.floor(Math.random()*(b-a+1)); }
+
+class DinoGame {
+  constructor(){ this.reset(); }
+  reset(){
+    this.y=GROUND; this.vy=0; this.ducking=false;
+    this.speed=START_SPEED; this.steps=0; this.score=0;
+    this.obstacles=[]; this._spawn(true); return this.state();
+  }
+  _spawn(initial=false){
+    const minGap=Math.floor(this.speed*26)+10;
+    const gap=randint(minGap,minGap+45);
+    const base = initial ? 100 : Math.max(...this.obstacles.map(o=>o.x));
+    const kind = Math.random()<0.75 ? "cactus" : "bird";
+    this.obstacles.push({x: base+gap, kind});
+  }
+  _next(){
+    const ahead=this.obstacles.filter(o=>o.x>=0);
+    if(!ahead.length) return null;
+    return ahead.reduce((m,o)=>o.x<m.x?o:m);
+  }
+  state(){
+    const o=this._next(), air=this.y>GROUND?1:0;
+    if(!o) return `9,0,${air}`;
+    const ttc=o.x/this.speed;
+    let t; if(ttc<5)t=0; else if(ttc<8)t=1; else if(ttc<12)t=2; else if(ttc<18)t=3; else t=4;
+    const kind=o.kind==="cactus"?0:1;
+    return `${t},${kind},${air}`;
+  }
+  step(a){
+    this.steps++; this.speed=Math.min(7.0, this.speed+SPEED_RAMP);
+    this.ducking=(a===DUCK && this.y===GROUND);
+    if(a===JUMP && this.y===GROUND) this.vy=JUMP_V;
+    if(this.y>GROUND || this.vy>0){
+      this.y+=this.vy; this.vy-=GRAVITY;
+      if(this.y<=GROUND){ this.y=GROUND; this.vy=0; }
+    }
+    for(const o of this.obstacles) o.x-=this.speed;
+    this.obstacles=this.obstacles.filter(o=>o.x>-10);
+    if(this.obstacles.length<2) this._spawn();
+    let done=false;
+    for(const o of this.obstacles){
+      if(o.x>-6 && o.x<6){
+        if(o.kind==="cactus"){ if(this.y<=GROUND+2) done=true; }
+        else { if(!this.ducking) done=true; }
+      }
+    }
+    const reward = done ? -100 : 1;
+    if(!done) this.score++;
+    return [this.state(), reward, done];
+  }
+}
+
+// ---- Q-table learner --------------------------------------------------------
+let Q={};
+const alpha=0.1, gamma=0.95;
+function q(s){ if(!(s in Q)) Q[s]=[0,0,0]; return Q[s]; }
+function greedy(s){ const v=Q[s]||[0,0,0]; let b=0; for(let i=1;i<3;i++) if(v[i]>v[b])b=i; return b; }
+
+// train N games headlessly (no drawing) at exploration eps
+function trainHeadless(n, eps){
+  for(let i=0;i<n;i++){
+    const g=new DinoGame(); let s=g.reset(), done=false;
+    while(!done){
+      const a = Math.random()<eps ? ACTIONS[randint(0,2)] : greedy(s);
+      const [ns,r,d]=g.step(a); const qs=q(s);
+      qs[a]+=alpha*(r+gamma*Math.max(...q(ns))-qs[a]);
+      s=ns; done=d;
+    }
+    gamesTrained++;
+  }
+}
+
+// ---- rendering --------------------------------------------------------------
+const cv=document.getElementById("c"), ctx=cv.getContext("2d");
+const W=cv.width, H=cv.height, GY=H-40;           // ground y on screen
+const DINO_X=90, YSCALE=3.4;                        // world-y -> pixels up
+
+// ---------------------------------------------------------------------------
+//  Pixel-art sprites (original artwork, drawn as bitmaps like a sprite sheet).
+//  '.' = transparent, 'X' = body, 'o' = eye(white), 'm' = mouth gap.
+//  Rendered at PX pixels per cell for a crisp retro look.
+// ---------------------------------------------------------------------------
+const PX = 4;
+const DINO_COL = "#444";        // classic dino grey
+const CACTUS_COL = "#3b7d3b";   // green cactus (authentic)
+const BIRD_COL = "#444";
+
+// T-Rex, standing / running (two leg frames). ~ 22 wide x 24 tall.
+const DINO_RUN_A = [
+  "..............XXXXXXX.",
+  "..............XoXXXXX.",
+  "..............XXXXXXX.",
+  "..............XXXXXXXX",
+  "..............XXXm....",
+  "..............XXXXX...",
+  "X.............XXXXXX..",
+  "XX...........XXXXXX...",
+  "XXX.........XXXXXXX...",
+  "XXXX.......XXXXXXXX...",
+  "XXXXX.....XXXXXXXXX...",
+  "XXXXXXXXXXXXXXXXXX....",
+  ".XXXXXXXXXXXXXXXXX....",
+  "..XXXXXXXXXXXXXXX.....",
+  "...XXXXXXXXXXXXXX.....",
+  "....XXXXXXXXXXXX......",
+  ".....XXXXXXXXXX.......",
+  "......XXXXXXXX........",
+  ".......XXX.XXX........",
+  ".......XX...XX........",
+  ".......XX...XX........",
+  ".......XX...X.........",
+  ".......XXX..XXX.......",
+  "......................",
+];
+const DINO_RUN_B = DINO_RUN_A.map((r,i)=> i>=18 ?
+  ["........XX..XXX......",
+   "........XX...X.......",
+   "........X....XX......",
+   ".......XXX...XX......",
+   "......XXX.....XX.....",
+   "......................"][i-18] || r : r);
+
+// T-Rex ducking (long, low). ~26 wide x 12 tall, head forward.
+const DINO_DUCK = [
+  "..........................",
+  "..........................",
+  "..........................",
+  "..........................",
+  "..........................",
+  "..........................",
+  "XX..................XXXXXX.",
+  "XXX................XoXXXXXX",
+  "XXXXXXXXXXXXXXXXXXXXXXXm...",
+  ".XXXXXXXXXXXXXXXXXXXXXXX...",
+  "..XXXXXXXXXXXXXXXXXXXXX....",
+  "....XX..........XX........",
+];
+
+// Cactus (tall, with two arms). 11 wide x 18 tall.
+const CACTUS = [
+  "....XXX....",
+  "....XXX....",
+  "....XXX....",
+  "X...XXX...X",
+  "XX..XXX..XX",
+  "XX..XXX..XX",
+  "XX..XXX..XX",
+  "XXX.XXX.XXX",
+  ".XX.XXX.XX.",
+  "..X.XXX.X..",
+  "....XXX....",
+  "....XXX....",
+  "....XXX....",
+  "....XXX....",
+  "....XXX....",
+  "....XXX....",
+  "....XXX....",
+  "....XXX....",
+];
+
+// Pterodactyl, two wing frames. 18 wide x 12 tall.
+const BIRD_UP = [
+  "..XX..............",
+  ".XXXX.............",
+  "XXXXXX............",
+  ".XXXXXXXXXXXX.....",
+  "..XXXXXXXXXXXXXXoX",
+  "...XXXXXXXXXXXXXXX",
+  "....XXXXXXXXXXX...",
+  ".......XXXX.......",
+  ".................." ,
+  "..................",
+  "..................",
+  "..................",
+];
+const BIRD_DOWN = [
+  ".................." ,
+  "..................",
+  "...............oX.",
+  ".XXXXXXXXXXXXXXXXX",
+  "..XXXXXXXXXXXXXXXX",
+  "...XXXXXXXXXXXX...",
+  "....XXXXXXXXX.....",
+  "XXXXXXXX..........",
+  ".XXXXXX...........",
+  "..XXXX............",
+  "...XX.............",
+  "..................",
+];
+
+function blit(sprite, left, top, color){
+  for(let r=0;r<sprite.length;r++){
+    const row=sprite[r];
+    for(let c=0;c<row.length;c++){
+      const ch=row[c];
+      if(ch==="."){ continue; }
+      ctx.fillStyle = (ch==="o") ? "#fff" : (ch==="m") ? "#f7f7f7" : color;
+      ctx.fillRect(left + c*PX, top + r*PX, PX, PX);
+    }
+  }
+}
+
+function draw(g, action){
+  // --- day/night cycle: invert theme every 400 points, like the real game ---
+  const cycle = Math.floor(g.score / 400);
+  const night = (cycle % 2) === 1;
+  const BG     = night ? "#1b1b1f" : "#f7f7f7";
+  const FG     = night ? "#d9d9de" : "#444";      // dino / birds
+  const GROUNDC= night ? "#6a6a72" : "#777";
+  const SPECK  = night ? "#55555c" : "#bdbdbd";
+  const CLOUDC = night ? "#2e2e36" : "#e3e3e3";
+  const CACTC  = night ? "#5c8f5c" : CACTUS_COL;
+
+  ctx.fillStyle = BG; ctx.fillRect(0,0,W,H);      // real background fill (themeable)
+
+  // stars or sun hint
+  if(night){
+    ctx.fillStyle="#f4f4d0";
+    ctx.fillRect(W-120,44,14,14); ctx.fillRect(W-116,40,6,6); // crescent-ish moon
+    ctx.fillStyle="#2e2e36"; ctx.fillRect(W-110,44,10,14);
+    ctx.fillStyle="#cfcfe0";
+    for(let i=0;i<7;i++){ ctx.fillRect(120+i*90, 40+((i*37)%60), 2,2); }
+  }
+
+  // ground line + moving speckle (parallax) — speed makes this visibly faster
+  ctx.strokeStyle=GROUNDC; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,GY+1); ctx.lineTo(W,GY+1); ctx.stroke();
+  ctx.fillStyle=SPECK;
+  const off = Math.floor(g.steps*g.speed)%40;
+  for(let x=-off;x<W;x+=40){ ctx.fillRect(x+12,GY+9,6,2); ctx.fillRect(x+28,GY+13,3,2); }
+  // a drifting cloud for depth (day only)
+  if(!night){
+    ctx.fillStyle=CLOUDC;
+    const cx = W - (Math.floor(g.steps*0.6)%(W+120));
+    ctx.fillRect(cx,40,34,10); ctx.fillRect(cx+8,34,20,10);
+  }
+
+  // obstacles
+  for(const o of g.obstacles){
+    const sx=DINO_X + o.x*2.2;
+    if(sx<-60||sx>W+60) continue;
+    if(o.kind==="cactus"){
+      const w=CACTUS[0].length*PX, h=CACTUS.length*PX;
+      blit(CACTUS, Math.round(sx-w/2), GY-h, CACTC);
+    } else {
+      const spr = (Math.floor(g.steps/6)%2) ? BIRD_UP : BIRD_DOWN;
+      const w=spr[0].length*PX;
+      blit(spr, Math.round(sx-w/2), GY-80, FG);
+    }
+  }
+
+  // dino
+  const ducking = (action===DUCK && g.y<=GROUND);
+  if(ducking){
+    const h=DINO_DUCK.length*PX;
+    blit(DINO_DUCK, DINO_X-24, GY-h, FG);
+  } else {
+    const spr = (g.y<=GROUND && (Math.floor(g.steps/5)%2)) ? DINO_RUN_B : DINO_RUN_A;
+    const h=spr.length*PX;
+    const top = (GY - g.y*YSCALE) - h;   // feet sit on g.y above ground
+    blit(spr, DINO_X-24, top, FG);
+  }
+
+  // action callout over dino
+  const dyTop = ducking ? GY-DINO_DUCK.length*PX : (GY - g.y*YSCALE) - DINO_RUN_A.length*PX;
+  const name={0:"",1:"JUMP!",2:"DUCK!"}[action]||"";
+  if(name){
+    ctx.fillStyle = action===JUMP ? "#2a7d5f" : "#c0392b";
+    ctx.font="bold 14px -apple-system,sans-serif";
+    ctx.fillText(name, DINO_X-16, dyTop-8);
+  }
+}
+
+// ---- HUD --------------------------------------------------------------------
+let gamesTrained=0, best=0;
+const $=id=>document.getElementById(id);
+function hud(g,eps,phase){
+  $("phase").textContent=phase; $("games").textContent=gamesTrained;
+  $("score").textContent=g?g.score:0; $("best").textContent=best;
+  $("speed").textContent=(g?g.speed:START_SPEED).toFixed(1);
+  $("eps").style.width=Math.round(eps*100)+"%";
+}
+
+// ---- animated play of one game ---------------------------------------------
+let raf=null;
+function playOnce(eps, phase, maxFrames, onDone){
+  const g=new DinoGame(); let s=g.reset(); let frame=0;
+  function tick(){
+    const a = (eps && Math.random()<eps) ? ACTIONS[randint(0,2)] : greedy(s);
+    draw(g,a);
+    const [ns,,done]=g.step(a); s=ns; frame++;
+    best=Math.max(best,g.score); hud(g,eps,phase);
+    if(done || frame>=maxFrames){ onDone&&onDone(g); return; }
+    raf=requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// ---- the "watch it learn" sequence -----------------------------------------
+function runShow(){
+  stop(); setBusy(true);
+  // Stage 1: untrained
+  playOnce(0, "STAGE 1 · untrained", 600, ()=>{
+    setTimeout(()=>{
+      trainHeadless(150, 0.3);                       // learn a little
+      playOnce(0.02, "STAGE 2 · ~150 games", 900, ()=>{
+        setTimeout(()=>{
+          trainHeadless(2000, 0.1);                  // learn a lot
+          playOnce(0, "STAGE 3 · fully trained", 3000, ()=>{
+            $("phase").textContent="done — it beats the game";
+            setBusy(false);
+          });
+        }, 700);
+      });
+    }, 700);
+  });
+}
+function stop(){ if(raf){ cancelAnimationFrame(raf); raf=null; } }
+function setBusy(b){ $("run").disabled=b; $("fast").disabled=b; }
+
+$("run").onclick=runShow;
+$("fast").onclick=()=>{ trainHeadless(2000,0.1); hud(null,0.1,"fast-trained"); alert("Trained 2000 games headless. Now click ▶ to watch it play."); };
+$("reset").onclick=()=>{ stop(); Q={}; gamesTrained=0; best=0; hud(new DinoGame(),1,"idle"); };
+
+// initial idle frame
+draw(new DinoGame(), RUN); hud(new DinoGame(),1,"idle");
+</script>
+</body>
+</html>

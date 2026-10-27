@@ -10,6 +10,18 @@ alone. It starts dying at the first cactus and ends surviving indefinitely.
 python3 dino_q_learning.py
 ```
 
+## Watch it with real graphics (browser)
+For a visual version — a pixel-art T-Rex that jumps cacti and ducks birds, with
+the authentic day/night (dark mode) flip and visible acceleration — open the
+self-contained HTML file in a browser:
+```bash
+open dino_visual.html        # macOS   (or double-click it)
+```
+It runs the **same Q-learning live in JavaScript**: click "▶ Watch it learn &
+play" to see it go from crashing (untrained) to clearing everything (trained).
+The artwork is original (not Google's sprites), so the file is self-contained and
+has no external dependencies.
+
 ---
 
 ## What you'll see
