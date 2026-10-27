@@ -29,6 +29,25 @@
 </ul>
 <blockquote>You&#x27;re shipping a <strong>learned function</strong> with opaque internals and a nonzero</blockquote>
 <blockquote>error distribution — not deterministic code.</blockquote>
+<svg viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <text x="160" y="22" text-anchor="middle" font-size="16" font-weight="bold" fill="#1f2a44">Classical software</text>
+  <rect x="40" y="36" width="90" height="40" rx="6" fill="#eef4ff" stroke="#b9c4da"/><text x="85" y="61" text-anchor="middle" font-size="13">rules + data</text>
+  <rect x="190" y="36" width="90" height="40" rx="6" fill="#1f2a44"/><text x="235" y="61" text-anchor="middle" font-size="13" fill="#fff">computer</text>
+  <rect x="115" y="110" width="90" height="40" rx="6" fill="#2a7d5f"/><text x="160" y="135" text-anchor="middle" font-size="13" fill="#fff">answers</text>
+  <path d="M130 56 H190" stroke="#1f2a44" stroke-width="2.5" fill="none" marker-end="url(#f1)"/>
+  <path d="M235 76 V110 H205" stroke="#1f2a44" stroke-width="2.5" fill="none" marker-end="url(#f1)"/>
+  <text x="460" y="22" text-anchor="middle" font-size="16" font-weight="bold" fill="#2a7d5f">Machine learning</text>
+  <rect x="340" y="36" width="90" height="40" rx="6" fill="#eef4ff" stroke="#b9c4da"/><text x="385" y="54" text-anchor="middle" font-size="12">data +</text><text x="385" y="69" text-anchor="middle" font-size="12">answers</text>
+  <rect x="490" y="36" width="90" height="40" rx="6" fill="#1f2a44"/><text x="535" y="61" text-anchor="middle" font-size="13" fill="#fff">computer</text>
+  <rect x="415" y="110" width="90" height="40" rx="6" fill="#2a7d5f"/><text x="460" y="128" text-anchor="middle" font-size="12" fill="#fff">rules</text><text x="460" y="143" text-anchor="middle" font-size="11" fill="#cfe9df">(learned f)</text>
+  <path d="M430 56 H490" stroke="#2a7d5f" stroke-width="2.5" fill="none" marker-end="url(#f2)"/>
+  <path d="M535 76 V110 H505" stroke="#2a7d5f" stroke-width="2.5" fill="none" marker-end="url(#f2)"/>
+  <defs>
+    <marker id="f1" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1f2a44"/></marker>
+    <marker id="f2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2a7d5f"/></marker>
+  </defs>
+</svg>
+<p>&lt;p class=&quot;diagram-caption&quot;&gt;ML inverts the inputs: you give data + answers, it outputs the rules (a learned function).&lt;/p&gt;</p>
 <p>Everything hard downstream (eval, guardrails, hallucination, drift) follows from</p>
 <p>that single fact.</p></section>
 <section class="slide"><h2>The parameterized-function model</h2>
@@ -51,7 +70,25 @@ per layer:   h = σ(Wx + b)
 <tr><td>Cost driver</td><td>GPU-hours, data scale</td><td>tokens/requests, SLOs</td></tr>
 <tr><th>You own</th><th>rarely</th><th><strong>almost always</strong></th></tr>
 </table>
-<p>Your leverage is in <strong>how you use</strong> the model, not the weights.</p></section>
+<p>Your leverage is in <strong>how you use</strong> the model, not the weights.</p>
+<svg viewBox="0 0 620 170" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <!-- training side -->
+  <rect x="30" y="30" width="250" height="110" rx="10" fill="#fdf3e6" stroke="#f0a500" stroke-width="2"/>
+  <text x="155" y="52" text-anchor="middle" font-size="15" font-weight="bold" fill="#b9770a">TRAINING (rare, offline)</text>
+  <text x="155" y="78" text-anchor="middle" font-size="13" fill="#333">forward → loss → backward → update θ</text>
+  <text x="155" y="100" text-anchor="middle" font-size="12" fill="#555">memory ≈ several × |θ|</text>
+  <text x="155" y="120" text-anchor="middle" font-size="12" fill="#555">cost: GPU-hours, data scale</text>
+  <!-- inference side -->
+  <rect x="340" y="30" width="250" height="110" rx="10" fill="#eafaf3" stroke="#2a7d5f" stroke-width="2"/>
+  <text x="465" y="52" text-anchor="middle" font-size="15" font-weight="bold" fill="#1d6a4f">INFERENCE (constant, online)</text>
+  <text x="465" y="78" text-anchor="middle" font-size="13" fill="#333">forward only → output</text>
+  <text x="465" y="100" text-anchor="middle" font-size="12" fill="#555">memory ≈ |θ| (+ KV cache)</text>
+  <text x="465" y="120" text-anchor="middle" font-size="12" fill="#555">cost: tokens/requests, latency SLOs</text>
+  <path d="M280 85 H340" stroke="#1f2a44" stroke-width="3" fill="none" marker-end="url(#t1)"/>
+  <text x="310" y="76" text-anchor="middle" font-size="12" fill="#1f2a44">ship θ</text>
+  <defs><marker id="t1" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1f2a44"/></marker></defs>
+</svg>
+<p>&lt;p class=&quot;diagram-caption&quot;&gt;Two different workloads — you almost always own the right-hand one.&lt;/p&gt;</p></section>
 <section class="slide"><h2>Why transformers specifically</h2>
 <p>Not &quot;nets got bigger&quot; — architecture-specific:</p>
 <ul>

@@ -35,7 +35,26 @@
 <ul>
 <li>✅ interpretable, no scaling needed, handles mixed types &amp; interactions</li>
 <li>❌ <strong>high variance</strong> — a deep tree memorizes the training set → overfits</li>
-</ul></section>
+</ul>
+<svg viewBox="0 0 520 190" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <!-- nodes -->
+  <g>
+    <rect x="200" y="20" width="120" height="34" rx="6" fill="#1f2a44"/><text x="260" y="42" text-anchor="middle" font-size="12" fill="#fff">worst area ≤ 880?</text>
+    <rect x="80"  y="80" width="120" height="34" rx="6" fill="#3a5c99"/><text x="140" y="102" text-anchor="middle" font-size="12" fill="#fff">concave ≤ .14?</text>
+    <rect x="320" y="80" width="120" height="34" rx="6" fill="#3a5c99"/><text x="380" y="102" text-anchor="middle" font-size="11" fill="#fff">texture ≤ .47?</text>
+    <rect x="30"  y="142" width="80" height="30" rx="6" fill="#2a7d5f"/><text x="70" y="162" text-anchor="middle" font-size="12" fill="#fff">benign</text>
+    <rect x="150" y="142" width="80" height="30" rx="6" fill="#c0392b"/><text x="190" y="162" text-anchor="middle" font-size="12" fill="#fff">malignant</text>
+    <rect x="300" y="142" width="80" height="30" rx="6" fill="#2a7d5f"/><text x="340" y="162" text-anchor="middle" font-size="12" fill="#fff">benign</text>
+    <rect x="400" y="142" width="80" height="30" rx="6" fill="#c0392b"/><text x="440" y="162" text-anchor="middle" font-size="12" fill="#fff">malignant</text>
+  </g>
+  <g stroke="#888" stroke-width="2">
+    <line x1="235" y1="54" x2="150" y2="80"/><line x1="285" y1="54" x2="370" y2="80"/>
+    <line x1="120" y1="114" x2="80" y2="142"/><line x1="160" y1="114" x2="190" y2="142"/>
+    <line x1="360" y1="114" x2="340" y2="142"/><line x1="400" y1="114" x2="440" y2="142"/>
+  </g>
+  <text x="180" y="70" font-size="10" fill="#2a7d5f">yes</text><text x="330" y="70" font-size="10" fill="#c0392b">no</text>
+</svg>
+<p>&lt;p class=&quot;diagram-caption&quot;&gt;A tree routes each example through if/else splits down to a leaf prediction — fully readable.&lt;/p&gt;</p></section>
 <section class="slide"><h2>Ensembles: cancel the errors</h2>
 <h3>Bagging → Random Forest (attacks <strong>variance</strong>)</h3>
 <ul>
@@ -57,7 +76,34 @@
 <tr><td>tuning</td><td>forgiving</td><td>sensitive</td></tr>
 <tr><th>result</th><th>robust baseline</th><th>best-in-class (if tuned)</th></tr>
 </table>
-<blockquote>RF for a fast robust baseline; GBM when you&#x27;ll tune for max accuracy.</blockquote></section>
+<blockquote>RF for a fast robust baseline; GBM when you&#x27;ll tune for max accuracy.</blockquote>
+<svg viewBox="0 0 600 190" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <!-- Bagging: parallel trees -->
+  <text x="150" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="#2a7d5f">Bagging (Random Forest)</text>
+  <g fill="#2a7d5f">
+    <polygon points="40,45 25,80 55,80"/><polygon points="100,45 85,80 115,80"/><polygon points="160,45 145,80 175,80"/><polygon points="220,45 205,80 235,80"/>
+  </g>
+  <text x="40" y="95" text-anchor="middle" font-size="18" fill="#888">⋯</text>
+  <text x="130" y="112" text-anchor="middle" font-size="12" fill="#333">independent, parallel</text>
+  <rect x="70" y="125" width="120" height="30" rx="6" fill="#2a7d5f"/><text x="130" y="145" text-anchor="middle" font-size="12" fill="#fff">average / vote</text>
+  <g stroke="#2a7d5f" stroke-width="1.5"><line x1="40" y1="80" x2="110" y2="125"/><line x1="100" y1="80" x2="120" y2="125"/><line x1="160" y1="80" x2="145" y2="125"/><line x1="220" y1="80" x2="160" y2="125"/></g>
+  <text x="130" y="175" text-anchor="middle" font-size="11" fill="#2a7d5f">↓ variance</text>
+  <!-- divider -->
+  <line x1="300" y1="30" x2="300" y2="175" stroke="#ccc" stroke-width="1"/>
+  <!-- Boosting: sequential -->
+  <text x="450" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="#c0392b">Boosting (Gradient Boosting)</text>
+  <g fill="#c0392b">
+    <polygon points="350,55 338,80 362,80"/><polygon points="420,55 408,80 432,80"/><polygon points="490,55 478,80 502,80"/><polygon points="560,55 548,80 572,80"/>
+  </g>
+  <g stroke="#c0392b" stroke-width="2" fill="none" marker-end="url(#b1)">
+    <path d="M362 68 H408"/><path d="M432 68 H478"/><path d="M502 68 H548"/>
+  </g>
+  <g font-size="10" fill="#555" text-anchor="middle"><text x="385" y="100">fix</text><text x="455" y="100">fix</text><text x="525" y="100">fix</text></g>
+  <text x="455" y="130" text-anchor="middle" font-size="12" fill="#333">each tree fixes prior errors</text>
+  <text x="455" y="150" text-anchor="middle" font-size="11" fill="#c0392b">↓ bias</text>
+  <defs><marker id="b1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#c0392b"/></marker></defs>
+</svg>
+<p>&lt;p class=&quot;diagram-caption&quot;&gt;Bagging averages many independent trees (↓variance); boosting chains trees that fix each other (↓bias).&lt;/p&gt;</p></section>
 <section class="slide"><h2>Interpretability — a real edge</h2>
 <ul>
 <li><strong>Feature importance</strong> — impurity reduction per feature (biased to high-cardinality; a guide)</li>
