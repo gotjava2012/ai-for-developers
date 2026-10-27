@@ -1,0 +1,119 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>AI for Developers — 08 Rl Games</title>
+<style>
+ body{margin:0;background:#1f2a44;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+ .slide{display:none;width:100vw;height:100vh;box-sizing:border-box;padding:6vh 8vw;
+   background:#fff;color:#1a1a1a;overflow:auto}
+ .slide.active{display:block}
+ h1{color:#1f2a44;font-size:2.4em;margin:.2em 0} h2{color:#1f2a44;font-size:1.8em}
+ h3{color:#2a3a5c} p,li{font-size:1.25em;line-height:1.5}
+ code{background:#eef1f6;padding:1px 5px;border-radius:4px;font-size:.9em}
+ pre{background:#0f1626;color:#d8e0f0;padding:16px;border-radius:8px;overflow:auto;font-size:1em}
+ pre code{background:none;color:inherit}
+ blockquote{border-left:4px solid #1f2a44;margin:.6em 0;padding:.3em 1em;color:#333;background:#f6f8fc}
+ table{border-collapse:collapse;font-size:1.05em} th,td{border:1px solid #cbd2e0;padding:6px 12px;text-align:left} th{background:#eef1f6}
+ .nav{position:fixed;bottom:12px;right:16px;color:#1f2a44;background:#fff;
+   padding:4px 10px;border-radius:6px;font-size:.9em;opacity:.8}
+</style></head><body>
+<section class="slide"><h1>Module 8 — Reinforcement Learning: AI That Learns to Beat a Game</h1>
+<p>The entire process, from zero knowledge to superhuman.</p></section>
+<section class="slide"><h2>The whole idea in one breath</h2>
+<ul>
+<li>The AI is <strong>never told the rules or the goal</strong></li>
+<li>It <strong>observes</strong> a state → <strong>acts</strong> → gets a <strong>reward</strong> + next state</li>
+<li>Repeats thousands of times, learning which actions lead to <strong>winning</strong></li>
+<li>Early: act randomly to <em>discover</em> (explore). Later: do what works (exploit)</li>
+<li>The learned state→action strategy is its <strong>policy</strong></li>
+</ul>
+<blockquote>Trial and error, guided by a reward signal. Everything else is mechanism.</blockquote></section>
+<section class="slide"><h2>Step 1 — Frame the game as an MDP</h2>
+<p>Five pieces that make a game <em>learnable</em>:</p>
+<ul>
+<li><strong>State</strong> — what the agent observes (grid cell / Atari pixels / board)</li>
+<li><strong>Action</strong> — the moves available</li>
+<li><strong>Transition</strong> — how the world responds (agent learns this by trying)</li>
+<li><strong>Reward</strong> — the <em>only</em> teaching signal: +1 win, −1 die, −0.01 per step</li>
+<li><strong>γ (discount)</strong> — value future reward; lets a move get credit for a later win</li>
+</ul></section>
+<section class="slide"><h2>Step 2 — What it computes: value</h2>
+<p><strong>Q(s, a)</strong> = &quot;expected total future reward if I take action <em>a</em> in state <em>s</em>,</p>
+<p>then keep playing well.&quot;</p>
+<ul>
+<li>Know the true Q → beating the game is trivial: pick <code>argmax Q(s, a)</code></li>
+<li>So the whole problem reduces to: <strong>estimate Q</strong></li>
+<li>Small game → Q is a lookup table (our grid: 16 × 4 = 64 numbers), starts at 0</li>
+</ul></section>
+<section class="slide"><h2>Step 3 — The learning loop (runs millions of times)</h2>
+<pre><code>
+observe state s
+choose action a      (explore or exploit)
+take it → next state s&#x27;, reward r, done?
+UPDATE Q(s, a) from r and s&#x27;
+s ← s&#x27;  ;  repeat until done
+</code></pre>
+<p>Two pieces make it <em>learn</em> rather than wander: the <strong>action choice</strong> and the</p>
+<p><strong>update</strong>.</p></section>
+<section class="slide"><h2>Step 4 — Explore vs. exploit</h2>
+<ul>
+<li>To learn good actions you must <strong>try</strong> them; to win you must <strong>use</strong> them</li>
+<li><strong>ε-greedy:</strong> with prob. ε act randomly, else take best known action</li>
+<li><strong>Decay ε:</strong> ~1.0 early (knows nothing) → ~0.05 late (trust the policy)</li>
+<li>This is why win rate is near-zero early (flailing on purpose), then climbs</li>
+</ul></section>
+<section class="slide"><h2>Step 5 — The update that makes it improve</h2>
+<pre><code>
+Q(s,a) ← Q(s,a) + α · [ r + γ·maxₐ&#x27; Q(s&#x27;,a&#x27;) − Q(s,a) ]
+                        └──── target ────┘   └ old ┘
+                        └──────── TD error ────────┘
+</code></pre>
+<ul>
+<li><strong>Nudge</strong> the old estimate toward reward + value of where you landed</li>
+<li><strong>Credit assignment:</strong> value propagates <em>backward</em> along the winning path,</li>
+<p>  one step per visit — early moves learn they lead to a far-off win</p>
+<li><strong>Off-policy:</strong> explores randomly yet still learns the <em>optimal</em> policy</li>
+</ul></section>
+<section class="slide"><h2>Step 6 — Scaling: tabular → deep RL</h2>
+<ul>
+<li>Grid: 64 table entries. Chess: ~10⁴⁰ states. Atari: millions of pixels</li>
+<li><strong>Only change: replace the Q-table with a neural net</strong> that approximates Q</li>
+<li>Everything else stays the same → that&#x27;s <strong>DQN</strong> (Atari from pixels, 2015)</li>
+<li>From here: <strong>PPO</strong> (policy gradients), <strong>AlphaZero</strong> (self-play + tree search),</li>
+<p>  <strong>MuZero</strong> (learns the rules, then plans)</p>
+</ul></section>
+<section class="slide"><h2>The milestones</h2>
+<table>
+<tr><th>AI</th><th>Game</th><th>Result</th></tr>
+<tr><td>DQN</td><td>49 Atari games</td><td>human-level from raw pixels</td></tr>
+<tr><td>AlphaGo → AlphaZero</td><td>Go/chess/shogi</td><td>superhuman from <strong>self-play only</strong></td></tr>
+<tr><td>OpenAI Five</td><td>Dota 2</td><td>beat world champions</td></tr>
+<tr><td>MuZero</td><td>Atari + board</td><td>won <strong>without being told the rules</strong></td></tr>
+</table></section>
+<section class="slide"><h2>Gotchas (why it&#x27;s genuinely hard)</h2>
+<ul>
+<li><strong>Sparse reward</strong> — never stumbles on a win to learn from → shape rewards</li>
+<li><strong>Reward hacking</strong> — maximizes the <em>literal</em> reward, not what you meant</li>
+<li><strong>Sample inefficiency</strong> — millions–billions of frames (OpenAI Five: ~900 yrs/day)</li>
+<li>**Your reward design <em>is</em> the goal definition** — get it wrong, it exploits it</li>
+</ul></section>
+<section class="slide"><h2>Beyond games</h2>
+<ul>
+<li>Same machinery: robotics, chip layout, datacenter cooling, trading</li>
+<li><strong>RLHF</strong> — the &quot;RL&quot; that aligns LLMs to human preferences</li>
+<li>Beating a game and being a helpful assistant are mechanically the same:</li>
+<p>  maximize a reward over a sequence of decisions</p>
+</ul></section>
+<section class="slide"><h2>Lab</h2>
+<p>Run a from-scratch Q-learning agent — <strong>stdlib only, no PyTorch</strong>:</p>
+<ul>
+<li>watch win rate climb <strong>~2% → ~90%</strong></li>
+<li>print the <strong>learned policy</strong> (arrows) and the exact <strong>winning path</strong></li>
+<li>it was never told the rules — only +1 / −1</li>
+</ul></section>
+<div class="nav"><span id="n">1</span> / 12 &nbsp;(← →)</div>
+<script>
+ let i=0; const s=document.querySelectorAll('.slide');
+ function show(x){s[i].classList.remove('active');i=(x+s.length)%s.length;s[i].classList.add('active');document.getElementById('n').textContent=i+1;}
+ show(0);
+ document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' ')show(i+1);if(e.key==='ArrowLeft')show(i-1);});
+ document.addEventListener('click',()=>show(i+1));
+</script></body></html>

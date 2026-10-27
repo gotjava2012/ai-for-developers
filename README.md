@@ -33,6 +33,7 @@ present, watch, or build:
 5. **Agents & Tool-Calling** — LLM + tools + a loop; function calling and MCP
 6. **Building Real, Responsible AI Apps** — evals, guardrails, cost, security, bias
 7. **Decision Models: Trees & Ensembles** — decision trees, random forests, gradient boosting; the models that win on tabular data
+8. **Reinforcement Learning: AI That Learns to Beat a Game** — MDPs, Q-learning, explore/exploit, deep RL (DQN→AlphaZero); the full process end to end
 
 ## Labs use real projects
 
