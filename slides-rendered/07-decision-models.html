@@ -1,0 +1,109 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>AI for Developers — 07 Decision Models</title>
+<style>
+ body{margin:0;background:#1f2a44;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+ .slide{display:none;width:100vw;height:100vh;box-sizing:border-box;padding:6vh 8vw;
+   background:#fff;color:#1a1a1a;overflow:auto}
+ .slide.active{display:block}
+ h1{color:#1f2a44;font-size:2.4em;margin:.2em 0} h2{color:#1f2a44;font-size:1.8em}
+ h3{color:#2a3a5c} p,li{font-size:1.25em;line-height:1.5}
+ code{background:#eef1f6;padding:1px 5px;border-radius:4px;font-size:.9em}
+ pre{background:#0f1626;color:#d8e0f0;padding:16px;border-radius:8px;overflow:auto;font-size:1em}
+ pre code{background:none;color:inherit}
+ blockquote{border-left:4px solid #1f2a44;margin:.6em 0;padding:.3em 1em;color:#333;background:#f6f8fc}
+ table{border-collapse:collapse;font-size:1.05em} th,td{border:1px solid #cbd2e0;padding:6px 12px;text-align:left} th{background:#eef1f6}
+ .nav{position:fixed;bottom:12px;right:16px;color:#1f2a44;background:#fff;
+   padding:4px 10px;border-radius:6px;font-size:.9em;opacity:.8}
+</style></head><body>
+<section class="slide"><h1>Module 7 — Decision Models</h1>
+<h3>Trees &amp; Ensembles</h3>
+<p>The family that quietly wins most <strong>tabular</strong> problems.</p></section>
+<section class="slide"><h2>Why this module</h2>
+<ul>
+<li>Deep learning → perception &amp; language</li>
+<li><strong>Tabular / &quot;predict a column&quot;</strong> → <strong>gradient-boosted trees</strong> are still SOTA</li>
+<li>Fraud, churn, pricing, ranking, risk: trees first, train in seconds on CPU</li>
+</ul>
+<blockquote>&quot;Decision model&quot; is overloaded — this is the <strong>ML</strong> sense (predictive trees).</blockquote>
+<blockquote>§last slide maps the <strong>decision-theory</strong> sense (expected value, MDPs).</blockquote></section>
+<section class="slide"><h2>A single decision tree</h2>
+<p>Learned hierarchy of <strong>if/else splits on features</strong>; route example → leaf → prediction.</p>
+<p><strong>Learned greedily:</strong> at each node pick the split that most <strong>reduces impurity</strong></p>
+<p>(Gini/entropy for classification, variance for regression); recurse until a stop rule.</p>
+<ul>
+<li>✅ interpretable, no scaling needed, handles mixed types &amp; interactions</li>
+<li>❌ <strong>high variance</strong> — a deep tree memorizes the training set → overfits</li>
+</ul></section>
+<section class="slide"><h2>Ensembles: cancel the errors</h2>
+<h3>Bagging → Random Forest (attacks <strong>variance</strong>)</h3>
+<ul>
+<li>many <strong>deep</strong> trees, each on a bootstrap sample + random feature subset</li>
+<li>average/vote → decorrelated trees → variance down, bias flat</li>
+<li>parallel, robust, few knobs, strong default</li>
+</ul>
+<h3>Boosting → Gradient Boosting (attacks <strong>bias</strong>)</h3>
+<ul>
+<li><strong>shallow</strong> trees in <strong>sequence</strong>, each fits the prior ensemble&#x27;s residuals</li>
+<li>shrinkage (learning rate); XGBoost / LightGBM / CatBoost</li>
+<li>best tabular accuracy — but sequential, tuning-sensitive, can overfit</li>
+</ul></section>
+<section class="slide"><h2>Bagging vs. Boosting</h2>
+<table>
+<tr><th></th><th>Random Forest</th><th>Gradient Boosting</th></tr>
+<tr><td>trees</td><td>deep, independent, parallel</td><td>shallow, sequential, residual-fitting</td></tr>
+<tr><td>attacks</td><td><strong>variance</strong></td><td><strong>bias</strong></td></tr>
+<tr><td>tuning</td><td>forgiving</td><td>sensitive</td></tr>
+<tr><th>result</th><th>robust baseline</th><th>best-in-class (if tuned)</th></tr>
+</table>
+<blockquote>RF for a fast robust baseline; GBM when you&#x27;ll tune for max accuracy.</blockquote></section>
+<section class="slide"><h2>Interpretability — a real edge</h2>
+<ul>
+<li><strong>Feature importance</strong> — impurity reduction per feature (biased to high-cardinality; a guide)</li>
+<li><strong>SHAP</strong> — principled per-prediction attributions; the standard for high-stakes</li>
+<li><strong>Decision path</strong> — literally print the if/else path for one prediction</li>
+</ul>
+<blockquote>Often <em>why</em> trees are chosen over a slightly-more-accurate black box</blockquote>
+<blockquote>(credit, risk, health).</blockquote></section>
+<section class="slide"><h2>Gotchas</h2>
+<ul>
+<li><strong>Overfitting</strong> — control depth/min-samples/#trees; early stopping (boosting)</li>
+<li><strong>Extrapolation</strong> — can&#x27;t predict beyond the training target range</li>
+<li><strong>Imbalance</strong> — accuracy lies; use class weights, precision/recall/AUC</li>
+<li><strong>Leakage</strong> — a feature smuggling the label → #1 &quot;great in dev, broken live&quot;</li>
+<li>importance ≠ causation</li>
+</ul></section>
+<section class="slide"><h2>Trees vs. nets vs. LLMs</h2>
+<table>
+<tr><th>Data / need</th><th>Use</th></tr>
+<tr><td>tabular &quot;predict a column&quot;</td><td><strong>gradient-boosted trees</strong></td></tr>
+<tr><td>interpretability / regulation</td><td><strong>trees + SHAP</strong></td></tr>
+<tr><td>images / audio / signals</td><td><strong>neural nets</strong></td></tr>
+<tr><td>text, few labels</td><td><strong>LLMs</strong> (prompt/RAG)</td></tr>
+<tr><th>small data, CPU, fast</th><th><strong>trees</strong></th></tr>
+</table>
+<blockquote>They <strong>compose</strong>: LLM extracts features from text → tree makes the decision.</blockquote></section>
+<section class="slide"><h2>The <em>other</em> &quot;decision models&quot; (don&#x27;t conflate)</h2>
+<p>Decision theory / OR — <strong>prescriptive</strong>, not predictive:</p>
+<ul>
+<li><strong>Decision trees (OR)</strong> — choices × probabilities × payoffs → max <strong>expected value</strong></li>
+<li><strong>Decision matrices</strong> — weighted multi-criteria scoring</li>
+<li><strong>MDPs</strong> — states/actions/rewards → basis of <strong>reinforcement learning</strong></li>
+</ul>
+<blockquote>ML trees: &quot;what will <em>happen</em>?&quot;  ·  Decision theory: &quot;what should I <em>do</em>?&quot;</blockquote></section>
+<section class="slide"><h2>Lab</h2>
+<p>Same dataset, three models:</p>
+<ul>
+<li>single tree → watch it <strong>overfit</strong> (train≫test)</li>
+<li>random forest → <strong>variance</strong> down</li>
+<li>gradient boosting → <strong>bias</strong> down, best AUC</li>
+<li>read feature importances + a decision path</li>
+</ul>
+<p><strong>Course complete</strong> — next steps in the README.</p></section>
+<div class="nav"><span id="n">1</span> / 10 &nbsp;(← →)</div>
+<script>
+ let i=0; const s=document.querySelectorAll('.slide');
+ function show(x){s[i].classList.remove('active');i=(x+s.length)%s.length;s[i].classList.add('active');document.getElementById('n').textContent=i+1;}
+ show(0);
+ document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' ')show(i+1);if(e.key==='ArrowLeft')show(i-1);});
+ document.addEventListener('click',()=>show(i+1));
+</script></body></html>

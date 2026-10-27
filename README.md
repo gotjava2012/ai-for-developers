@@ -32,6 +32,7 @@ present, watch, or build:
 4. **Giving an LLM Your Own Data** — RAG vs fine-tuning, and when to use each
 5. **Agents & Tool-Calling** — LLM + tools + a loop; function calling and MCP
 6. **Building Real, Responsible AI Apps** — evals, guardrails, cost, security, bias
+7. **Decision Models: Trees & Ensembles** — decision trees, random forests, gradient boosting; the models that win on tabular data
 
 ## Labs use real projects
 
