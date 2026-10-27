@@ -1,0 +1,150 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>AI for Developers — 09 Beat The Dino</title>
+<style>
+ body{margin:0;background:#1f2a44;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+ .slide{display:none;width:100vw;height:100vh;box-sizing:border-box;padding:6vh 8vw;
+   background:#fff;color:#1a1a1a;overflow:auto}
+ .slide.active{display:block}
+ h1{color:#1f2a44;font-size:2.4em;margin:.2em 0} h2{color:#1f2a44;font-size:1.8em}
+ h3{color:#2a3a5c} p,li{font-size:1.25em;line-height:1.5}
+ code{background:#eef1f6;padding:1px 5px;border-radius:4px;font-size:.9em}
+ pre{background:#0f1626;color:#d8e0f0;padding:16px;border-radius:8px;overflow:auto;font-size:1em}
+ pre code{background:none;color:inherit}
+ blockquote{border-left:4px solid #1f2a44;margin:.6em 0;padding:.3em 1em;color:#333;background:#f6f8fc}
+ table{border-collapse:collapse;font-size:1.05em} th,td{border:1px solid #cbd2e0;padding:6px 12px;text-align:left} th{background:#eef1f6}
+ .nav{position:fixed;bottom:12px;right:16px;color:#1f2a44;background:#fff;
+   padding:4px 10px;border-radius:6px;font-size:.9em;opacity:.8}
+ svg{display:block;margin:1em auto;max-width:92%;height:auto}
+ .diagram-caption{text-align:center;color:#555;font-size:.95em;margin-top:.2em}
+</style></head><body>
+<section class="slide"><h1>Module 9 — Beat the Chrome Dino Game</h1>
+<p>RL from Module 8, pointed at a real game — and it actually wins.</p></section>
+<section class="slide"><h2>Why the dino game (of all games)</h2>
+<ul>
+<li><strong>Mario</strong> → NES emulator + deep CNN → PyTorch/GPU (Colab territory)</li>
+<li><strong>Tetris</strong> → board-evaluation + search; provably unwinnable long-term</li>
+<li><strong>Dino</strong> → <strong>low-dimensional state</strong> → a Q-table is enough → pure Python, trains in seconds</li>
+</ul>
+<blockquote>The whole decision is: <em>obstacle coming? what kind? am I airborne?</em> —</blockquote>
+<blockquote>a few numbers, not a screen of pixels. That&#x27;s why tabular RL works here.</blockquote></section>
+<section class="slide"><h2>The game as an MDP (recall §8.2)</h2>
+<svg viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <!-- ground -->
+  <line x1="20" y1="150" x2="600" y2="150" stroke="#555" stroke-width="2"/>
+  <!-- dino -->
+  <rect x="60" y="118" width="30" height="32" rx="4" fill="#2a7d5f"/>
+  <text x="75" y="168" text-anchor="middle" font-size="12" fill="#2a7d5f" font-weight="bold">dino</text>
+  <!-- cactus -->
+  <rect x="330" y="120" width="16" height="30" fill="#c0392b"/>
+  <text x="338" y="168" text-anchor="middle" font-size="11" fill="#c0392b">cactus</text>
+  <!-- bird -->
+  <polygon points="500,96 516,104 500,112" fill="#1f2a44"/>
+  <text x="508" y="90" text-anchor="middle" font-size="11" fill="#1f2a44">bird</text>
+  <!-- distance arrow (above ground, clear of boxes) -->
+  <path d="M95 104 H326" stroke="#f0a500" stroke-width="2" fill="none" marker-end="url(#d1)"/>
+  <text x="210" y="98" text-anchor="middle" font-size="12" fill="#b9770a" font-weight="bold">time-to-impact</text>
+  <!-- scroll arrow -->
+  <path d="M560 135 H470" stroke="#555" stroke-width="2" fill="none" marker-end="url(#d2)"/>
+  <text x="520" y="130" text-anchor="middle" font-size="11" fill="#555">scroll (speed ↑)</text>
+  <!-- actions -->
+  <text x="75" y="192" text-anchor="middle" font-size="11" fill="#333">RUN · JUMP · DUCK</text>
+  <text x="430" y="192" text-anchor="middle" font-size="11" fill="#333">reward = +1 / frame,  −100 on crash</text>
+  <defs>
+    <marker id="d1" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#f0a500"/></marker>
+    <marker id="d2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#555"/></marker>
+  </defs>
+</svg>
+<p>&lt;p class=&quot;diagram-caption&quot;&gt;State = (time-to-impact, obstacle kind, airborne). Actions = run/jump/duck. Reward = survive.&lt;/p&gt;</p></section>
+<section class="slide"><h2>The one decision that makes or breaks it: the state</h2>
+<ul>
+<li>Naive: bucket the <strong>raw distance</strong> to the next obstacle → <strong>fails</strong></li>
+<li>The jump has fixed <strong>air time</strong>; the distance to launch at depends on <strong>speed</strong>,</li>
+<p>  which keeps rising → one table cell means &quot;jump now&quot; at slow speed, &quot;too late&quot; at fast</p>
+<li><strong>Fix:</strong> bucket <strong>time-to-impact = distance ÷ speed</strong> → one rule works at every speed</li>
+<li>State collapses to <strong>~20 cells</strong>; the agent learns <strong>one</strong> policy that generalizes</li>
+</ul></section>
+<section class="slide"><h2>Raw distance fails; time-to-impact works</h2>
+<svg viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <!-- LEFT: raw distance -->
+  <text x="155" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="#c0392b">Raw distance (fails)</text>
+  <line x1="30" y1="70" x2="280" y2="70" stroke="#555" stroke-width="2"/>
+  <rect x="40" y="52" width="20" height="18" rx="3" fill="#2a7d5f"/>
+  <rect x="150" y="50" width="12" height="20" fill="#c0392b"/>
+  <text x="105" y="44" text-anchor="middle" font-size="11" fill="#b9770a">dist = 110</text>
+  <path d="M60 80 H150" stroke="#f0a500" stroke-width="2" fill="none"/>
+  <text x="155" y="104" text-anchor="middle" font-size="11" fill="#2a7d5f">slow: jump now ✓</text>
+  <line x1="30" y1="150" x2="280" y2="150" stroke="#555" stroke-width="2"/>
+  <rect x="40" y="132" width="20" height="18" rx="3" fill="#2a7d5f"/>
+  <rect x="150" y="130" width="12" height="20" fill="#c0392b"/>
+  <text x="105" y="124" text-anchor="middle" font-size="11" fill="#b9770a">dist = 110</text>
+  <path d="M60 160 H150" stroke="#f0a500" stroke-width="2" fill="none"/>
+  <text x="165" y="184" text-anchor="middle" font-size="11" fill="#c0392b">fast: same cell, but too late ✗</text>
+  <!-- divider -->
+  <line x1="310" y1="20" x2="310" y2="195" stroke="#ccc"/>
+  <!-- RIGHT: time to impact -->
+  <text x="470" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="#2a7d5f">Time-to-impact (works)</text>
+  <text x="470" y="52" text-anchor="middle" font-size="13" fill="#333">ttc = distance ÷ speed</text>
+  <rect x="360" y="70" width="220" height="30" rx="5" fill="#eafaf3" stroke="#2a7d5f"/>
+  <text x="470" y="90" text-anchor="middle" font-size="12" fill="#1d6a4f">"jump when ttc ≈ 5–8 frames"</text>
+  <text x="470" y="128" text-anchor="middle" font-size="12" fill="#333">one rule — holds at every speed</text>
+  <text x="470" y="162" text-anchor="middle" font-size="12" fill="#2a7d5f" font-weight="bold">~20 states total</text>
+</svg>
+<p>&lt;p class=&quot;diagram-caption&quot;&gt;Feature engineering for RL: pick a state where the right action is a stable rule.&lt;/p&gt;</p></section>
+<section class="slide"><h2>The learner — unchanged from Module 8</h2>
+<pre><code>
+Q[s][a] ← Q[s][a] + α · ( r + γ·max Q[s&#x27;][a&#x27;] − Q[s][a] )
+</code></pre>
+<ul>
+<li>explore early (ε≈1.0): discover jumping clears cacti, ducking clears birds</li>
+<li>exploit late (ε≈0.02): run the learned policy</li>
+<li>the <strong>−100</strong> crash penalty propagates <strong>backward</strong> → act <em>before</em> the obstacle</li>
+</ul>
+<blockquote>Only the environment and the state changed. The RL core is identical —</blockquote>
+<blockquote>that&#x27;s the point: it transfers from a toy grid to a real game.</blockquote></section>
+<section class="slide"><h2>What it learned (lab result)</h2>
+<svg viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <line x1="150" y1="190" x2="580" y2="190" stroke="#333" stroke-width="2"/>
+  <!-- bars (scaled: 5000 -> 150px wide max) -->
+  <g>
+    <rect x="150" y="30"  width="64"  height="22" fill="#c0392b"/><text x="222" y="46" font-size="12">64</text>
+    <rect x="150" y="62"  width="125" height="22" fill="#e67e22"/><text x="283" y="78" font-size="12">125</text>
+    <rect x="150" y="94"  width="81"  height="22" fill="#e67e22"/><text x="239" y="110" font-size="12">81</text>
+    <rect x="150" y="126" width="97"  height="22" fill="#f0a500"/><text x="255" y="142" font-size="12">97</text>
+    <rect x="150" y="158" width="420" height="22" fill="#2a7d5f"/><text x="470" y="174" font-size="12" fill="#fff" font-weight="bold">5000 (the cap)</text>
+  </g>
+  <g font-size="12" fill="#333" text-anchor="end">
+    <text x="144" y="46">always RUN</text>
+    <text x="144" y="78">always JUMP</text>
+    <text x="144" y="110">always DUCK</text>
+    <text x="144" y="142">random</text>
+    <text x="144" y="174" font-weight="bold" fill="#2a7d5f">learned</text>
+  </g>
+  <text x="365" y="212" text-anchor="middle" font-size="12" fill="#555">frames survived (greedy policy, 5 games)</text>
+</svg>
+<p>&lt;p class=&quot;diagram-caption&quot;&gt;The learned policy is the only one that jumps cacti AND ducks birds conditionally.&lt;/p&gt;</p></section>
+<section class="slide"><h2>When you&#x27;d need deep RL from pixels</h2>
+<ul>
+<li>Our agent gets a <strong>clean state</strong>; the famous videos learn <strong>from the screen</strong></li>
+<li>Deep-RL recipe (on <strong>Colab</strong>, needs PyTorch/GPU):</li>
+<li>wrap the game in a Gym interface; stack 3–4 grayscale frames (for velocity)</li>
+<li>small <strong>CNN → Q-values</strong> (a DQN); add <strong>experience replay</strong> + <strong>target network</strong></li>
+<li>+1/frame, −1 on death; ~1–2M frames</li>
+<li>Local tabular version teaches the same ideas, runs in seconds, <strong>and wins</strong></li>
+</ul>
+<blockquote><strong>Use the simplest representation that makes the decision easy.</strong> Reach for deep</blockquote>
+<blockquote>RL only when the state is genuinely pixels/audio and features won&#x27;t do.</blockquote></section>
+<section class="slide"><h2>Lab</h2>
+<p>Pure stdlib — no PyTorch, no emulator, no install:</p>
+<ul>
+<li>train from zero → watch avg score climb</li>
+<li>run the learned policy vs RUN-only / JUMP-only / DUCK-only / random</li>
+<li>the learned agent survives the <strong>5000-frame cap</strong> every game — effectively unbeatable</li>
+</ul></section>
+<div class="nav"><span id="n">1</span> / 9 &nbsp;(← →)</div>
+<script>
+ let i=0; const s=document.querySelectorAll('.slide');
+ function show(x){s[i].classList.remove('active');i=(x+s.length)%s.length;s[i].classList.add('active');document.getElementById('n').textContent=i+1;}
+ show(0);
+ document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' ')show(i+1);if(e.key==='ArrowLeft')show(i-1);});
+ document.addEventListener('click',()=>show(i+1));
+</script></body></html>

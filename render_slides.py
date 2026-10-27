@@ -19,7 +19,7 @@ OUT.mkdir(exist_ok=True)
 MODULES = [
     "01-foundations", "02-how-ml-works", "03-llms-for-developers",
     "04-your-own-data", "05-agents-and-tools", "06-responsible-ai-apps",
-    "07-decision-models", "08-rl-games",
+    "07-decision-models", "08-rl-games", "09-beat-the-dino",
 ]
 
 

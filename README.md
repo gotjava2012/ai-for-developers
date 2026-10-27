@@ -34,6 +34,7 @@ present, watch, or build:
 6. **Building Real, Responsible AI Apps** — evals, guardrails, cost, security, bias
 7. **Decision Models: Trees & Ensembles** — decision trees, random forests, gradient boosting; the models that win on tabular data
 8. **Reinforcement Learning: AI That Learns to Beat a Game** — MDPs, Q-learning, explore/exploit, deep RL (DQN→AlphaZero); the full process end to end
+9. **Beat the Chrome Dino Game** — RL applied to a real game; state design (time-to-impact), a Q-learning agent that survives indefinitely
 
 ## Labs use real projects
 
