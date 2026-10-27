@@ -59,7 +59,7 @@ then keep playing well."
 - Small game → Q is a lookup table (our grid: 16 × 4 = 64 numbers), starts at 0
 
 ```svg
-<svg viewBox="0 0 520 220" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+<svg viewBox="0 0 520 235" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
   <!-- 4x4 grid, cell = 50px, origin 60,20 -->
   <g stroke="#cbd2e0" stroke-width="2">
     <!-- draw cells -->
@@ -141,9 +141,9 @@ Two pieces make it *learn* rather than wander: the **action choice** and the
   <text x="500" y="40" text-anchor="end" font-size="13" fill="#2a7d5f" font-weight="bold">~90%</text>
   <text x="110" y="190" font-size="13" fill="#2a7d5f" font-weight="bold">~2%</text>
   <!-- epsilon decay line (dashed, high->low) across same box -->
-  <polyline points="100,45 514,185" fill="none" stroke="#c0392b" stroke-width="3" stroke-dasharray="7 5"/>
-  <text x="120" y="60" font-size="13" fill="#c0392b" font-weight="bold">ε high (explore)</text>
-  <text x="430" y="178" font-size="13" fill="#c0392b" font-weight="bold" text-anchor="end">ε low (exploit)</text>
+  <polyline points="100,55 514,185" fill="none" stroke="#c0392b" stroke-width="3" stroke-dasharray="7 5"/>
+  <text x="150" y="48" font-size="13" fill="#c0392b" font-weight="bold">ε high (explore)</text>
+  <text x="440" y="178" font-size="13" fill="#c0392b" font-weight="bold" text-anchor="end">ε low (exploit)</text>
 </svg>
 ```
 <p class="diagram-caption">As ε decays (red), the agent stops flailing and the win rate (green) climbs.</p>

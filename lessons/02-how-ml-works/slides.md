@@ -48,7 +48,7 @@ minimize over θ:  L(θ) = (1/N) Σ loss(f(xᵢ;θ), yᵢ) + regularization
   <g stroke="#c0392b" stroke-width="2.5" fill="none" marker-end="url(#g1)">
     <path d="M99 84 L142 122"/><path d="M159 134 L202 157"/><path d="M219 166 L258 176"/>
   </g>
-  <text x="120" y="112" font-size="12" fill="#c0392b">−η·∇L</text>
+  <text x="185" y="120" font-size="12" fill="#c0392b">step = −η·∇L</text>
   <text x="300" y="186" font-size="13" fill="#2a7d5f" font-weight="bold">minimum</text>
   <text x="80" y="70" font-size="12" fill="#555">start (random θ)</text>
   <text x="280" y="205" text-anchor="middle" font-size="13" fill="#333">θ (parameters)</text>
