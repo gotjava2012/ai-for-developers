@@ -1,0 +1,80 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>AI for Developers — 03 Llms For Developers</title>
+<style>
+ body{margin:0;background:#1f2a44;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+ .slide{display:none;width:100vw;height:100vh;box-sizing:border-box;padding:6vh 8vw;
+   background:#fff;color:#1a1a1a;overflow:auto}
+ .slide.active{display:block}
+ h1{color:#1f2a44;font-size:2.4em;margin:.2em 0} h2{color:#1f2a44;font-size:1.8em}
+ h3{color:#2a3a5c} p,li{font-size:1.25em;line-height:1.5}
+ code{background:#eef1f6;padding:1px 5px;border-radius:4px;font-size:.9em}
+ pre{background:#0f1626;color:#d8e0f0;padding:16px;border-radius:8px;overflow:auto;font-size:1em}
+ pre code{background:none;color:inherit}
+ blockquote{border-left:4px solid #1f2a44;margin:.6em 0;padding:.3em 1em;color:#333;background:#f6f8fc}
+ table{border-collapse:collapse;font-size:1.05em} th,td{border:1px solid #cbd2e0;padding:6px 12px;text-align:left} th{background:#eef1f6}
+ .nav{position:fixed;bottom:12px;right:16px;color:#1f2a44;background:#fff;
+   padding:4px 10px;border-radius:6px;font-size:.9em;opacity:.8}
+</style></head><body>
+<section class="slide"><h1>Module 3</h1>
+<h2>LLMs for Developers</h2>
+<p>What an LLM really does — and your first call from code.</p></section>
+<section class="slide"><h2>What an LLM actually does</h2>
+<blockquote>Given some text, <strong>predict the next token.</strong></blockquote>
+<ul>
+<li>A <strong>token</strong> ≈ ¾ of a word</li>
+<li>Output a probability for every possible next token → pick one → repeat</li>
+<li>Whole paragraphs = next-token prediction, over and over</li>
+</ul>
+<p>It is <strong>not</strong> looking things up. It&#x27;s generating likely continuations.</p></section>
+<section class="slide"><h2>The knobs you&#x27;ll touch</h2>
+<ul>
+<li><strong>Context window</strong> — max tokens it can see (prompt + output)</li>
+<li><strong>Temperature</strong> — randomness (0 = focused, high = creative)</li>
+<li><strong>Max tokens</strong> — output length cap</li>
+<li><strong>System prompt</strong> — sets role &amp; rules (your main lever)</li>
+<li><strong>Stop sequences</strong> — halt generation</li>
+</ul>
+<p>💸 You pay per token — <strong>input and output</strong>. Token-awareness = a core skill.</p></section>
+<section class="slide"><h2>Prompting is engineering</h2>
+<ul>
+<li><strong>System prompt</strong> sets role + rules</li>
+<li>Be <strong>specific about format</strong> (JSON? list? show an example)</li>
+<li>Give <strong>examples</strong> (few-shot) — often beats instructions</li>
+<li>Put instruction first; <strong>delimit</strong> the data clearly</li>
+<li>&quot;Think step by step&quot; for reasoning tasks</li>
+</ul>
+<p>Vague prompt → vague output. Specificity is the game.</p></section>
+<section class="slide"><h2>Hallucination</h2>
+<p>LLMs generate <em>plausible</em> text, not <em>retrieved true</em> text.</p>
+<p>→ They state false things <strong>confidently</strong>.</p>
+<p>Not fully fixable — <strong>manage</strong> it:</p>
+<ul>
+<li>Ground with real data (<strong>RAG</strong>, Module 4)</li>
+<li>Ask for sources &amp; verify</li>
+<li>Lower temperature for facts</li>
+<li>Never auto-trust output</li>
+</ul>
+<blockquote>#1 beginner mistake: assuming the output is true.</blockquote></section>
+<section class="slide"><h2>Local vs. hosted</h2>
+<ul>
+<li><strong>Hosted API</strong> (OpenAI/Anthropic) — easiest, most capable, pay-per-token</li>
+<li><strong>Local</strong> (Ollama) — free, private, offline, smaller models</li>
+<li><strong>Open-weight</strong> (Llama/Qwen) — download, run, or fine-tune</li>
+</ul>
+<p>Labs default to <strong>Ollama</strong> (free/offline) — same code pattern as an API.</p></section>
+<section class="slide"><h2>Lab</h2>
+<ul>
+<li>Make your <strong>first LLM call</strong> from code (Ollama or an API)</li>
+<li>Change <strong>temperature</strong> — watch output vary</li>
+<li>Improve a <strong>prompt</strong> and compare results</li>
+<li><strong>Trigger a hallucination</strong> on purpose</li>
+</ul>
+<p><strong>Next:</strong> Module 4 — Giving an LLM Your Own Data (RAG &amp; fine-tuning)</p></section>
+<div class="nav"><span id="n">1</span> / 7 &nbsp;(← →)</div>
+<script>
+ let i=0; const s=document.querySelectorAll('.slide');
+ function show(x){s[i].classList.remove('active');i=(x+s.length)%s.length;s[i].classList.add('active');document.getElementById('n').textContent=i+1;}
+ show(0);
+ document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' ')show(i+1);if(e.key==='ArrowLeft')show(i-1);});
+ document.addEventListener('click',()=>show(i+1));
+</script></body></html>

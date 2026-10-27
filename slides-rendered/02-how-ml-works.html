@@ -1,0 +1,87 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>AI for Developers — 02 How Ml Works</title>
+<style>
+ body{margin:0;background:#1f2a44;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+ .slide{display:none;width:100vw;height:100vh;box-sizing:border-box;padding:6vh 8vw;
+   background:#fff;color:#1a1a1a;overflow:auto}
+ .slide.active{display:block}
+ h1{color:#1f2a44;font-size:2.4em;margin:.2em 0} h2{color:#1f2a44;font-size:1.8em}
+ h3{color:#2a3a5c} p,li{font-size:1.25em;line-height:1.5}
+ code{background:#eef1f6;padding:1px 5px;border-radius:4px;font-size:.9em}
+ pre{background:#0f1626;color:#d8e0f0;padding:16px;border-radius:8px;overflow:auto;font-size:1em}
+ pre code{background:none;color:inherit}
+ blockquote{border-left:4px solid #1f2a44;margin:.6em 0;padding:.3em 1em;color:#333;background:#f6f8fc}
+ table{border-collapse:collapse;font-size:1.05em} th,td{border:1px solid #cbd2e0;padding:6px 12px;text-align:left} th{background:#eef1f6}
+ .nav{position:fixed;bottom:12px;right:16px;color:#1f2a44;background:#fff;
+   padding:4px 10px;border-radius:6px;font-size:.9em;opacity:.8}
+</style></head><body>
+<section class="slide"><h1>Module 2</h1>
+<h2>How ML Actually Works</h2>
+<p>The training loop — and watching a model learn, live.</p></section>
+<section class="slide"><h2>The one-sentence version</h2>
+<blockquote>ML = **adjust a model&#x27;s parameters over and over until its predictions</blockquote>
+<blockquote>stop being wrong.**</blockquote>
+<p>Everything else is detail.</p></section>
+<section class="slide"><h2>Four ingredients</h2>
+<ul>
+<li><strong>Data</strong> — inputs (features X) + correct answers (labels y)</li>
+<li><strong>Model</strong> — a function with adjustable <strong>parameters</strong></li>
+<li><strong>Loss</strong> — a number: how wrong are we? (lower = better)</li>
+<li><strong>Optimizer</strong> — the rule that nudges parameters (gradient descent)</li>
+</ul></section>
+<section class="slide"><h2>The training loop (heartbeat of all ML)</h2>
+<pre><code>
+repeat (each pass = one &quot;epoch&quot;):
+   1. FORWARD   inputs → predictions
+   2. LOSS      how wrong?
+   3. BACKWARD  each parameter&#x27;s share of the error (gradients)
+   4. UPDATE    nudge parameters to reduce loss
+</code></pre>
+<p>Thousands of times → loss falls → that&#x27;s <strong>learning</strong>.</p></section>
+<section class="slide"><h2>Gradient descent, intuitively</h2>
+<p>Foggy hill. Want the lowest point.</p>
+<p>Feel which way is downhill → step → repeat.</p>
+<ul>
+<li><strong>Gradient</strong> = which way is downhill for the loss</li>
+<li><strong>Learning rate</strong> = how big a step</li>
+<li>too small → slow</li>
+<li>too big → overshoot / diverge</li>
+</ul></section>
+<section class="slide"><h2>Why non-linearity matters</h2>
+<p>Only straight-line math → can only learn straight lines.</p>
+<p>(100 linear layers still = a line.)</p>
+<p>Add a <strong>non-linear activation</strong> (ReLU) between layers → the network can bend to</p>
+<p>fit complex patterns.</p>
+<p><strong>You&#x27;ll prove it:</strong> spiral dataset →</p>
+<p>with non-linearity ~99%, without it ~50%.</p></section>
+<section class="slide"><h2>The discipline that saves you: train/test split</h2>
+<ul>
+<li>Model can <strong>memorize</strong> training data → 100% there, useless on new data</li>
+<li>That&#x27;s <strong>overfitting</strong></li>
+<li>So <strong>hold out</strong> a test set the model never sees → evaluate on <em>that</em></li>
+</ul>
+<blockquote>&quot;99% on training, 61% on test&quot; = memorized, not learned.</blockquote>
+<blockquote>The <strong>test</strong> score is the real one.</blockquote></section>
+<section class="slide"><h2>Kinds of ML</h2>
+<ul>
+<li><strong>Supervised</strong> — labeled X → y (classification, regression) ← most common</li>
+<li><strong>Unsupervised</strong> — find structure, no labels (clustering, embeddings)</li>
+<li><strong>Reinforcement</strong> — learn by reward/trial</li>
+</ul>
+<p>LLMs = &quot;predict the next token&quot; (supervised) + human-feedback tuning —</p>
+<p>same loop, enormous scale.</p></section>
+<section class="slide"><h2>Lab</h2>
+<ul>
+<li>Run <code>neural-net-from-scratch</code> → watch loss fall, accuracy rise</li>
+<li>Remove the non-linearity → watch it collapse to ~50%</li>
+<li>Run <code>ml-training-pipeline</code> → see train vs. test honesty</li>
+</ul>
+<p><strong>Next:</strong> Module 3 — LLMs for Developers (your first LLM call)</p></section>
+<div class="nav"><span id="n">1</span> / 9 &nbsp;(← →)</div>
+<script>
+ let i=0; const s=document.querySelectorAll('.slide');
+ function show(x){s[i].classList.remove('active');i=(x+s.length)%s.length;s[i].classList.add('active');document.getElementById('n').textContent=i+1;}
+ show(0);
+ document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' ')show(i+1);if(e.key==='ArrowLeft')show(i-1);});
+ document.addEventListener('click',()=>show(i+1));
+</script></body></html>

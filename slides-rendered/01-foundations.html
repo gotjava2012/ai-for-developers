@@ -1,0 +1,102 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>AI for Developers — 01 Foundations</title>
+<style>
+ body{margin:0;background:#1f2a44;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+ .slide{display:none;width:100vw;height:100vh;box-sizing:border-box;padding:6vh 8vw;
+   background:#fff;color:#1a1a1a;overflow:auto}
+ .slide.active{display:block}
+ h1{color:#1f2a44;font-size:2.4em;margin:.2em 0} h2{color:#1f2a44;font-size:1.8em}
+ h3{color:#2a3a5c} p,li{font-size:1.25em;line-height:1.5}
+ code{background:#eef1f6;padding:1px 5px;border-radius:4px;font-size:.9em}
+ pre{background:#0f1626;color:#d8e0f0;padding:16px;border-radius:8px;overflow:auto;font-size:1em}
+ pre code{background:none;color:inherit}
+ blockquote{border-left:4px solid #1f2a44;margin:.6em 0;padding:.3em 1em;color:#333;background:#f6f8fc}
+ table{border-collapse:collapse;font-size:1.05em} th,td{border:1px solid #cbd2e0;padding:6px 12px;text-align:left} th{background:#eef1f6}
+ .nav{position:fixed;bottom:12px;right:16px;color:#1f2a44;background:#fff;
+   padding:4px 10px;border-radius:6px;font-size:.9em;opacity:.8}
+</style></head><body>
+<section class="slide"><h1>AI for Developers</h1>
+<h2>Module 1 — Foundations</h2>
+<p>Build the right mental model before writing any AI code.</p></section>
+<section class="slide"><h2>The term soup, settled</h2>
+<pre><code>
+AI  ⊃  Machine Learning  ⊃  Deep Learning  ⊃  (Generative AI, LLMs)
+</code></pre>
+<ul>
+<li><strong>AI</strong> — make machines do human-like tasks (umbrella)</li>
+<li><strong>ML</strong> — learn patterns from data instead of hand-coding rules</li>
+<li><strong>Deep Learning</strong> — ML with many-layered neural networks</li>
+<li><strong>Generative AI / LLMs</strong> — generate new text/code/images</li>
+</ul>
+<blockquote>When someone says &quot;AI,&quot; ask: <em>a trained model, or an LLM behind an API?</em></blockquote></section>
+<section class="slide"><h2>Why now?</h2>
+<p>Old ideas + three new ingredients:</p>
+<ul>
+<li><strong>Data</strong> — the internet</li>
+<li><strong>Compute</strong> — GPUs</li>
+<li><strong>The transformer</strong> (2017) — scales with data + compute</li>
+</ul>
+<p>No magic. Just scale meeting one key architecture.</p></section>
+<section class="slide"><h2>The distinction that matters most</h2>
+<h1>Training ≠ Inference</h1></section>
+<section class="slide"><h2>Training — building the model</h2>
+<ul>
+<li>Feed data → model adjusts millions/billions of <strong>parameters</strong></li>
+<li>Expensive, slow, done <strong>rarely</strong> (GPUs, weeks, $$$)</li>
+<li>Output: a <strong>trained model</strong></li>
+</ul>
+<h2>Inference — using the model</h2>
+<ul>
+<li>Input → trained model → output</li>
+<li>Cheap, fast, done <strong>constantly</strong></li>
+<li><strong>This is where 95% of developers work</strong></li>
+</ul></section>
+<section class="slide"><h2>The flow</h2>
+<pre><code>
+[ lots of data ]
+      │  TRAINING  (rare, expensive)
+      ▼
+[ trained model ]
+      │  INFERENCE (constant, an API call)
+      ▼
+[ your app&#x27;s output ]
+</code></pre>
+<p>You almost always <strong>use</strong> a model (inference), not train one.</p></section>
+<section class="slide"><h2>What AI is good at</h2>
+<ul>
+<li>Pattern recognition (images, speech, anomalies)</li>
+<li>Generating &amp; transforming text/code</li>
+<li>Summarizing, classifying, extracting structure</li>
+</ul>
+<h2>What it can&#x27;t do</h2>
+<ul>
+<li>Guarantee <strong>truth</strong> (hallucination)</li>
+<li>Know your private data / post-cutoff facts (unless you supply them)</li>
+<li>Be deterministic without guardrails</li>
+</ul></section>
+<section class="slide"><h2>The mental model</h2>
+<blockquote>Treat an LLM like a <strong>brilliant, fast, confident intern</strong></blockquote>
+<blockquote>who sometimes makes things up.</blockquote>
+<blockquote></blockquote>
+<blockquote>Useful everywhere. Trusted nowhere without verification.</blockquote></section>
+<section class="slide"><h2>Where you&#x27;ll spend your time</h2>
+<ul>
+<li>Inference &amp; prompting</li>
+<li>Grounding with your data (RAG, fine-tuning)</li>
+<li>Agents &amp; tools</li>
+<li>Evals, guardrails, cost, security</li>
+<li>Training (rarely — usually fine-tuning)</li>
+</ul></section>
+<section class="slide"><h2>Lab + next up</h2>
+<p><strong>Lab:</strong> read the key terms, then do the <code>lab/</code> exercise (a no-code concept</p>
+<p>sorting + a first look at a model file).</p>
+<p><strong>Next:</strong> Module 2 — <em>How ML Actually Works</em> → you&#x27;ll run a neural network and</p>
+<p>watch it learn.</p></section>
+<div class="nav"><span id="n">1</span> / 10 &nbsp;(← →)</div>
+<script>
+ let i=0; const s=document.querySelectorAll('.slide');
+ function show(x){s[i].classList.remove('active');i=(x+s.length)%s.length;s[i].classList.add('active');document.getElementById('n').textContent=i+1;}
+ show(0);
+ document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' ')show(i+1);if(e.key==='ArrowLeft')show(i-1);});
+ document.addEventListener('click',()=>show(i+1));
+</script></body></html>

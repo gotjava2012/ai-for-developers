@@ -1,0 +1,79 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>AI for Developers — 05 Agents And Tools</title>
+<style>
+ body{margin:0;background:#1f2a44;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+ .slide{display:none;width:100vw;height:100vh;box-sizing:border-box;padding:6vh 8vw;
+   background:#fff;color:#1a1a1a;overflow:auto}
+ .slide.active{display:block}
+ h1{color:#1f2a44;font-size:2.4em;margin:.2em 0} h2{color:#1f2a44;font-size:1.8em}
+ h3{color:#2a3a5c} p,li{font-size:1.25em;line-height:1.5}
+ code{background:#eef1f6;padding:1px 5px;border-radius:4px;font-size:.9em}
+ pre{background:#0f1626;color:#d8e0f0;padding:16px;border-radius:8px;overflow:auto;font-size:1em}
+ pre code{background:none;color:inherit}
+ blockquote{border-left:4px solid #1f2a44;margin:.6em 0;padding:.3em 1em;color:#333;background:#f6f8fc}
+ table{border-collapse:collapse;font-size:1.05em} th,td{border:1px solid #cbd2e0;padding:6px 12px;text-align:left} th{background:#eef1f6}
+ .nav{position:fixed;bottom:12px;right:16px;color:#1f2a44;background:#fff;
+   padding:4px 10px;border-radius:6px;font-size:.9em;opacity:.8}
+</style></head><body>
+<section class="slide"><h1>Module 5</h1>
+<h2>Agents &amp; Tool-Calling</h2>
+<p>Where LLMs stop talking and start doing.</p></section>
+<section class="slide"><h2>What an agent really is</h2>
+<blockquote><strong>an LLM + tools + a loop</strong></blockquote>
+<ul>
+<li><strong>LLM</strong> decides what to do next</li>
+<li><strong>Tools</strong> = functions it can call (search, query, run code, send email)</li>
+<li><strong>Loop</strong> = think → act → observe → repeat, until done</li>
+</ul>
+<p>&quot;Agentic&quot; = the model can <strong>take actions</strong> and react to results.</p></section>
+<section class="slide"><h2>Tool-calling (the core mechanism)</h2>
+<p>An LLM only produces text — it can&#x27;t run code itself. So:</p>
+<pre><code>
+1. You describe tools to the model (name, purpose, params)
+2. Model replies: &quot;call get_weather({city:&#x27;Denver&#x27;})&quot;
+3. YOUR code runs the function
+4. You feed the result back
+5. Model answers (or calls another tool)
+</code></pre>
+<p>🔒 The model only <em>requests</em>. <strong>Your code decides whether to run it.</strong></p></section>
+<section class="slide"><h2>The agent loop</h2>
+<pre><code>
+1. give LLM the goal + available tools
+2. LLM → final answer OR a tool call
+3. tool call? your code runs it, captures result
+4. feed result back
+5. repeat until final answer (or a limit)
+</code></pre>
+<p>⚠️ <strong>Always cap the loop</strong> — unbounded agents loop, cost, and thrash.</p></section>
+<section class="slide"><h2>Where MCP fits</h2>
+<p>Many tools across many systems → integration chaos.</p>
+<p><strong>MCP (Model Context Protocol)</strong> = open standard for exposing/calling tools.</p>
+<ul>
+<li><strong>MCP server</strong> — exposes tools (Jira, GitHub, …)</li>
+<li><strong>MCP client</strong> — your AI app uses them</li>
+<li><strong>MCP gateway</strong> — routes many servers; adds auth, rate limits, logging</li>
+</ul>
+<blockquote>The &quot;USB-C of AI tools.&quot; Build a tool once; any MCP client can use it.</blockquote></section>
+<section class="slide"><h2>What can go wrong (design for it)</h2>
+<ul>
+<li><strong>Runaway loops</strong> → cap iterations &amp; cost</li>
+<li><strong>Irreversible actions</strong> → confirm spend/delete/send; human in the loop</li>
+<li><strong>Prompt injection via tool results</strong> → treat tool output as untrusted</li>
+<li><strong>Over-broad permissions</strong> → least access per tool</li>
+</ul>
+<p>Good agent engineering = good <strong>boundary</strong> engineering.</p></section>
+<section class="slide"><h2>Lab</h2>
+<ul>
+<li>Build a tiny <strong>agent</strong>: LLM + 2 tools + a loop</li>
+<li>Watch it <strong>think → call a tool → observe → answer</strong></li>
+<li>See where <strong>your code</strong> gates the tool call</li>
+</ul>
+<p><strong>Next:</strong> Module 6 — Building Real, Responsible AI Apps</p></section>
+<div class="nav"><span id="n">1</span> / 7 &nbsp;(← →)</div>
+<script>
+ let i=0; const s=document.querySelectorAll('.slide');
+ function show(x){s[i].classList.remove('active');i=(x+s.length)%s.length;s[i].classList.add('active');document.getElementById('n').textContent=i+1;}
+ show(0);
+ document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' ')show(i+1);if(e.key==='ArrowLeft')show(i-1);});
+ document.addEventListener('click',()=>show(i+1));
+</script></body></html>

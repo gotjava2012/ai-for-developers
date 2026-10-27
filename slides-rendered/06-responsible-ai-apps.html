@@ -1,0 +1,89 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>AI for Developers — 06 Responsible Ai Apps</title>
+<style>
+ body{margin:0;background:#1f2a44;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+ .slide{display:none;width:100vw;height:100vh;box-sizing:border-box;padding:6vh 8vw;
+   background:#fff;color:#1a1a1a;overflow:auto}
+ .slide.active{display:block}
+ h1{color:#1f2a44;font-size:2.4em;margin:.2em 0} h2{color:#1f2a44;font-size:1.8em}
+ h3{color:#2a3a5c} p,li{font-size:1.25em;line-height:1.5}
+ code{background:#eef1f6;padding:1px 5px;border-radius:4px;font-size:.9em}
+ pre{background:#0f1626;color:#d8e0f0;padding:16px;border-radius:8px;overflow:auto;font-size:1em}
+ pre code{background:none;color:inherit}
+ blockquote{border-left:4px solid #1f2a44;margin:.6em 0;padding:.3em 1em;color:#333;background:#f6f8fc}
+ table{border-collapse:collapse;font-size:1.05em} th,td{border:1px solid #cbd2e0;padding:6px 12px;text-align:left} th{background:#eef1f6}
+ .nav{position:fixed;bottom:12px;right:16px;color:#1f2a44;background:#fff;
+   padding:4px 10px;border-radius:6px;font-size:.9em;opacity:.8}
+</style></head><body>
+<section class="slide"><h1>Module 6</h1>
+<h2>Building Real, Responsible AI Apps</h2>
+<p>From cool demo → trustworthy, shippable feature.</p></section>
+<section class="slide"><h2>Evals — does it even work?</h2>
+<p>LLMs are non-deterministic → exact-match tests don&#x27;t fit.</p>
+<p>Measure <strong>quality</strong> instead:</p>
+<ul>
+<li><strong>Golden set</strong> — fixed inputs + known-good expectations</li>
+<li><strong>Rule/assertion checks</strong> — valid JSON? required fields? cites a source?</li>
+<li><strong>Similarity / keyword</strong> — are the key facts present?</li>
+<li><strong>LLM-as-judge</strong> — another model scores (validate it)</li>
+<li><strong>Human review</strong> — gold standard for high-stakes</li>
+</ul>
+<blockquote>Even 20 examples beats vibes. Build evals early.</blockquote></section>
+<section class="slide"><h2>Guardrails — constrain in &amp; out</h2>
+<ul>
+<li><strong>Input</strong> — block prompt injection, PII, off-topic/abuse</li>
+<li><strong>Output</strong> — schema/JSON validation, forbidden-content filter, &quot;must cite,&quot;</li>
+<p>  length, groundedness</p>
+<li><strong>Fallbacks</strong> — safe default when a guardrail trips</li>
+</ul>
+<blockquote>Never pipe raw LLM output into something consequential</blockquote>
+<blockquote>(DB write, email, shell) without validating it.</blockquote></section>
+<section class="slide"><h2>Cost &amp; latency</h2>
+<ul>
+<li><strong>Route by difficulty</strong> — cheap model for easy, big model for hard</li>
+<li><strong>Trim prompts/context</strong> — shorter = cheaper</li>
+<li><strong>Cache</strong> repeated queries/embeddings</li>
+<li><strong>Stream</strong> tokens → better perceived latency</li>
+<li><strong>Set <code>max_tokens</code></strong> — cap runaway cost</li>
+</ul>
+<blockquote>Track cost per request from day one.</blockquote></section>
+<section class="slide"><h2>Security — AI-specific risks</h2>
+<ul>
+<li><strong>Prompt injection</strong> — hostile instructions in untrusted content</li>
+<p>  → treat all external content as untrusted; separate instructions from data</p>
+<li><strong>Data leakage</strong> — no secrets in prompts; redact PII; careful logging</li>
+<li><strong>Insecure output handling</strong> — output in SQL/shell/HTML → validate &amp; escape</li>
+<li><strong>Excessive agency</strong> — least privilege + human approval</li>
+</ul>
+<p>(≈ OWASP Top 10 for LLM apps)</p></section>
+<section class="slide"><h2>Bias, fairness &amp; privacy</h2>
+<ul>
+<li><strong>Bias</strong> — models mirror training data; test disparate outcomes; human in the</li>
+<p>  loop for consequential decisions</p>
+<li><strong>Privacy</strong> — know where data goes; minimize; comply (GDPR…)</li>
+<li><strong>Transparency</strong> — tell users it&#x27;s AI and that it can be wrong</li>
+</ul>
+<p>Often legal requirements, not nice-to-haves.</p></section>
+<section class="slide"><h2>Shipping checklist</h2>
+<ul>
+<li>[ ] Golden eval set (run on every change)</li>
+<li>[ ] Output validation before use</li>
+<li>[ ] Input/output guardrails</li>
+<li>[ ] Cost tracked; <code>max_tokens</code>; cheap-model routing</li>
+<li>[ ] No secrets in prompts/logs; PII handled</li>
+<li>[ ] Least-privilege tools; human approval for risky actions</li>
+<li>[ ] Fallbacks for failures</li>
+<li>[ ] Transparency to users</li>
+</ul></section>
+<section class="slide"><h2>Lab + course wrap</h2>
+<p><strong>Lab:</strong> add a guardrail + a tiny eval harness → make &quot;works / safe&quot; measurable.</p>
+<p>🎓 You&#x27;ve gone from <em>what is AI</em> → building RAG, agents, and shipping</p>
+<p>responsibly. <strong>Next steps</strong> in the course README.</p></section>
+<div class="nav"><span id="n">1</span> / 8 &nbsp;(← →)</div>
+<script>
+ let i=0; const s=document.querySelectorAll('.slide');
+ function show(x){s[i].classList.remove('active');i=(x+s.length)%s.length;s[i].classList.add('active');document.getElementById('n').textContent=i+1;}
+ show(0);
+ document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' ')show(i+1);if(e.key==='ArrowLeft')show(i-1);});
+ document.addEventListener('click',()=>show(i+1));
+</script></body></html>
